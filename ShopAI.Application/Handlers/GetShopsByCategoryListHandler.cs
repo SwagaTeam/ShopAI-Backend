@@ -1,3 +1,4 @@
+using AutoMapper;
 using MediatR;
 using ShopAI.Application.Models;
 using ShopAI.Infrastructure.Repositories.Abstractions;
@@ -8,21 +9,33 @@ public record ShopsByCategoryVm(string CategoryName, List<ShopShortDto> Shops);
 
 public record GetShopsByCategoryListQuery : IRequest<List<ShopsByCategoryVm>>;
 
-public class GetShopsByCategoryListHandler(ICategoryRepository categoryRepository) 
+public class GetShopsByCategoryListHandler(
+    ICategoryRepository categoryRepository,
+    IMapper mapper) 
     : IRequestHandler<GetShopsByCategoryListQuery, List<ShopsByCategoryVm>>
 {
     public async Task<List<ShopsByCategoryVm>> Handle(GetShopsByCategoryListQuery request, CancellationToken ct)
     {
-        var categories = await categoryRepository.GetAllAsync();
+        var categories = await categoryRepository.GetAllWithShopsAsync(ct);
+
+        if (categories == null || !categories.Any())
+        {
+            return new List<ShopsByCategoryVm>();
+        }
 
         var result = categories
             .GroupBy(c => c.Name)
             .Select(g => new ShopsByCategoryVm(
                 g.Key,
-                g.Select(c => new ShopShortDto(c.ShopId, c.Shop.Name, c.Shop.UrlAlias))
+                g.Where(c => c.Shop != null)
+                    .Select(c => new ShopShortDto(
+                        c.ShopId, 
+                        c.Shop!.Name, 
+                        c.Shop.UrlAlias))
                     .DistinctBy(s => s.Id) 
                     .ToList()
             ))
+            .OrderBy(vm => vm.CategoryName) 
             .ToList();
 
         return result;

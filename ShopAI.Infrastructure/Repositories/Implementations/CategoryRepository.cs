@@ -8,4 +8,12 @@ public class CategoryRepository(AppDbContext context) : Repository<Category>(con
 {
     public async Task<List<Category>> GetByShopIdAsync(Guid shopId)
         => await _context.Categories.Where(c => c.ShopId == shopId).ToListAsync();
+    
+    public async Task<ICollection<Category>> GetAllWithShopsAsync(CancellationToken ct = default)
+    {
+        return await _context.Categories
+            .AsNoTracking() 
+            .Include(c => c.Shop)
+            .ToListAsync(ct);
+    }
 }

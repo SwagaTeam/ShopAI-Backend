@@ -11,6 +11,8 @@ public interface IRepository<T> where T : Entity
     void Update(T entity);
     void Delete(T entity);
     Task SaveAsync(CancellationToken ct = default);
+    Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
+    Task<bool> AnyAsync(System.Linq.Expressions.Expression<Func<T, bool>> predicate, CancellationToken ct = default);
 }
 
 public interface IShopRepository : IRepository<Shop>
@@ -30,6 +32,7 @@ public interface IProductRepository : IRepository<Product>
 public interface ICategoryRepository : IRepository<Category>
 {
     Task<List<Category>> GetByShopIdAsync(Guid shopId);
+    Task<ICollection<Category>> GetAllWithShopsAsync(CancellationToken ct = default);
 }
 
 public interface IOrderRepository : IRepository<Order>

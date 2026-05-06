@@ -16,12 +16,19 @@ public class GetMainPageProductsHandler(
 {
     public async Task<MainPageProductsVm> Handle(GetMainPageProductsQuery request, CancellationToken ct)
     {
-        var latestEntities = await productRepository.GetLatestAsync(request.Count);
-        var popularEntities = await productRepository.GetPopularAsync(request.Count);
+        var count = request.Count switch
+        {
+            <= 0 => 10,     
+            > 100 => 100,    
+            _ => request.Count
+        };
 
-        var latestDtos = mapper.Map<List<ProductShortDto>>(latestEntities);
-        var popularDtos = mapper.Map<List<ProductShortDto>>(popularEntities);
+        var latestEntities = await productRepository.GetLatestAsync(count);
+        var popularEntities = await productRepository.GetPopularAsync(count);
 
-        return new MainPageProductsVm(latestDtos, popularDtos);
+        return new MainPageProductsVm(
+            mapper.Map<List<ProductShortDto>>(latestEntities),
+            mapper.Map<List<ProductShortDto>>(popularEntities)
+        );
     }
 }
