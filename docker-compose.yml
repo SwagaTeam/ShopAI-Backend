@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  shopai-api:
+    image: ${DOCKER_REGISTRY-}shopai-backend:latest
+    build:
+      context: .
+      dockerfile: ShopAI.Presentation/Dockerfile
+    ports:
+      - "5000:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - shopai-net
+
+  db:
+    image: postgres:16-alpine
+    container_name: shopai-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopai-net
+
+networks:
+  shopai-net:
+    driver: bridge
+
+volumes:
+  pgdata:

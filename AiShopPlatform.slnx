@@ -1,4 +1,7 @@
 <Solution>
+  <Project Path="AiShopPlatform.dcproj" Id="a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d">
+    <Build />
+  </Project>
   <Project Path="ShopAI.Application/ShopAI.Application.csproj" />
   <Project Path="ShopAI.Domain/ShopAI.Domain.csproj" />
   <Project Path="ShopAI.Infrastructure/ShopAI.Infrastructure.csproj" />
