@@ -16,7 +16,7 @@ public class GetShopsByCategoryListHandler(
     {
         var categories = await categoryRepository.GetAllWithShopsAsync(ct);
 
-        if (categories == null || !categories.Any())
+        if (!categories.Any())
         {
             return new List<ShopsByCategoryVm>();
         }
