@@ -1,4 +1,5 @@
-﻿using Domain.Entities;
+﻿using System.Linq.Expressions;
+using Domain.Entities;
 using Domain.Entities.Abstractions;
 
 namespace ShopAI.Infrastructure.Repositories.Abstractions;
@@ -13,6 +14,7 @@ public interface IRepository<T> where T : Entity
     Task SaveAsync(CancellationToken ct = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
     Task<bool> AnyAsync(System.Linq.Expressions.Expression<Func<T, bool>> predicate, CancellationToken ct = default);
+    Task<T?> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate, CancellationToken ct = default);
 }
 
 public interface IShopRepository : IRepository<Shop>
@@ -43,4 +45,14 @@ public interface IOrderRepository : IRepository<Order>
 public interface IBrandRepository : IRepository<Brand> 
 {
     Task<Brand?> GetByNameAsync(string name);
+}
+
+public interface IUserRepository : IRepository<User>
+{
+    Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
+}
+
+public interface IRefreshTokenRepository : IRepository<RefreshToken>
+{
+    Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken ct = default);
 }

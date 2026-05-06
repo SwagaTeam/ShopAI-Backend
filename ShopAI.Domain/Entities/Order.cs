@@ -1,18 +1,25 @@
-﻿using Domain.Entities.Abstractions;
+﻿using Domain.Entities;
+using Domain.Entities.Abstractions;
 using Domain.Enums;
 using Domain.ValueObjects;
 
-namespace Domain.Entities;
-
-public class Order(Guid shopId, CustomerInfo customer) : Entity
+public class Order : Entity
 {
-    public Guid ShopId { get; private set; } = shopId;
-    public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
-    public OrderStatus Status { get; private set; } = OrderStatus.New;
-    public CustomerInfo Customer { get; private set; } = customer;
-    
+    protected Order() { }
+
+    public Order(Guid shopId, CustomerInfo customer)
+    {
+        ShopId = shopId;
+        Customer = customer;
+        CreatedAt = DateTime.UtcNow;
+        Status = OrderStatus.New;
+    }
+
+    public Guid ShopId { get; set; }
+    public DateTime CreatedAt { get; private set; }
+    public OrderStatus Status { get; set; }
+    public CustomerInfo Customer { get; set; }
+
     public virtual Shop Shop { get; private set; }
     public virtual ICollection<OrderItem> Items { get; private set; } = new List<OrderItem>();
 }
-
-

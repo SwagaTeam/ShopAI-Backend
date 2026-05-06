@@ -1,15 +1,30 @@
-﻿using Domain.Entities.Abstractions;
+﻿using System.Runtime.CompilerServices;
+using Domain.Entities.Abstractions;
 using Domain.ValueObjects;
 
 namespace Domain.Entities;
 
-public class Shop(string name, string urlAlias, Guid ownerId) : Entity
+public class Shop : Entity
 {
-    public string Name { get; private set; } = name;
-    public string UrlAlias { get; private set; } = urlAlias.ToLower(); 
-    public Guid OwnerId { get; private set; } = ownerId;
+    protected Shop() { }
 
-    public ShopTheme Theme { get; private set; } = ShopTheme.Default();
+    public Shop(string name, string urlAlias, Guid ownerId)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name required");
+
+        Name = name;
+        UrlAlias = urlAlias.ToLower();
+        OwnerId = ownerId;
+        Theme = ShopTheme.Default();
+    }
+
+    public string Name { get; set; }
+    public string UrlAlias { get; set; }
+    public Guid OwnerId { get; set; }
+
+    public ShopTheme Theme { get; set; } = ShopTheme.Default();
+    public User Owner { get; set; }
     
     public void UpdateTheme(string cssVariables, string configJson)
     {

@@ -2,12 +2,21 @@
 
 namespace Domain.Entities;
 
-public class Category(string name, Guid shopId, Guid? parentId = null) : Entity
+public class Category : Entity
 {
-    public string Name { get; private set; } = name;
-    public Guid? ParentCategoryId { get; private set; } = parentId;
-    public Guid ShopId { get; private set; } = shopId;
+    protected Category() { }
+
+    public Category(string name, Guid shopId, Guid? parentCategoryId = null)
+    {
+        Name = name;
+        ShopId = shopId;
+        ParentCategoryId = parentCategoryId;
+    }
+
+    public string Name { get; set; }
+    public Guid? ParentCategoryId { get; set; }
+    public Guid ShopId { get; set; }
     
-    public virtual Shop Shop { get; private set; }
-    public virtual ICollection<Product> Products { get; private set; } = new List<Product>();
+    public virtual Shop Shop { get; set; }
+    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 }

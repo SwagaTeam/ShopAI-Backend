@@ -3,13 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ShopAI.Infrastructure.Repositories.Abstractions;
 using ShopAI.Infrastructure.Repositories.Implementations;
-
 namespace ShopAI.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -22,7 +21,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IShopRepository, ShopRepository>();
         services.AddScoped<IBrandRepository, BrandRepository>();
-        
+
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+
+        services.AddHostedService<DatabaseMigrator>();
 
         return services;
     }

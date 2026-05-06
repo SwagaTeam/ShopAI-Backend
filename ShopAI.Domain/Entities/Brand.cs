@@ -1,9 +1,15 @@
 ﻿using Domain.Entities.Abstractions;
 
-namespace Domain.Entities;
-
-public class Brand(string name, string logoUrl) : Entity
+public class Brand : Entity
 {
-    public string Name { get; private set; } = name;
-    public string LogoUrl { get; private set; } = logoUrl;
+    protected Brand() { }
+
+    public Brand(string name, string logoUrl)
+    {
+        Name = name;
+        LogoUrl = logoUrl;
+    }
+
+    public string Name { get; set; }
+    public string LogoUrl { get; set; }
 }

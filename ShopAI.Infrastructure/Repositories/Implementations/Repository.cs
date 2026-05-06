@@ -29,4 +29,9 @@ public class Repository<T>(AppDbContext context) : IRepository<T>
     {
         return await _dbSet.AnyAsync(predicate, ct);
     }
+
+    public async Task<T?> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate, CancellationToken ct = default)
+    {
+        return await _dbSet.SingleOrDefaultAsync(predicate, ct);
+    }
 }

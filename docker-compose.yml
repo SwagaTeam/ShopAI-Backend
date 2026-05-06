@@ -1,11 +1,14 @@
-version: '3.8'
-
 services:
   shopai-api:
     image: ${DOCKER_REGISTRY-}shopai-backend:latest
     build:
       context: .
       dockerfile: ShopAI.Presentation/Dockerfile
+    environment:
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
     ports:
       - "5000:8080"
     depends_on:

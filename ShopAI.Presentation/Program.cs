@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -19,14 +18,14 @@ services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Deputy API",
+        Title = "ShopAI API",
         Version = "v1",
-        Description = "API для депутатского приложения"
+        Description = "Backend API для маркетплейса ShopAI"
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "Введите ваш JWT",
+        Description = "Введите ваш JWT токен (без слова Bearer)",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
@@ -39,27 +38,22 @@ services.AddSwaggerGen(options =>
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
-            []
+            Array.Empty<string>()
         }
     });
 
-    options.UseInlineDefinitionsForEnums();
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath)) options.IncludeXmlComments(xmlPath);
+    if (File.Exists(xmlPath))
+        options.IncludeXmlComments(xmlPath);
 });
 
 services.AddSwaggerGenNewtonsoftSupport();
 
 services
     .AddEndpointsApiExplorer()
-    .AddSwaggerGen()
     .AddInfrastructure(builder.Configuration)
     .AddApplication();
 
@@ -70,6 +64,9 @@ services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
+
+var jwtSecret = builder.Configuration["Jwt:SecretKey"] ?? "fallback_secret_key_32_characters_long";
+var key = Encoding.UTF8.GetBytes(jwtSecret);
 
 services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -82,14 +79,20 @@ services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_KEY") ?? "super_secret_key_123")),
-            RoleClaimType = ClaimTypes.Role
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ClockSkew = TimeSpan.Zero
         };
     });
 
 services.AddAuthorization();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseCors("AllowAll");
 
