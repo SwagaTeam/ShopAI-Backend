@@ -1,4 +1,5 @@
-﻿using Domain.Entities.Abstractions;
+﻿using System.Linq.Expressions;
+using Domain.Entities.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using ShopAI.Infrastructure.Repositories.Abstractions;
 
@@ -20,4 +21,12 @@ public class Repository<T>(AppDbContext context) : IRepository<T>
 
     public void Delete(T entity) => _dbSet.Remove(entity);
     public async Task SaveAsync(CancellationToken ct = default) => await context.SaveChangesAsync(ct);
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _dbSet.AnyAsync(x => x.Id == id, ct);
+    }
+    public async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken ct = default)
+    {
+        return await _dbSet.AnyAsync(predicate, ct);
+    }
 }

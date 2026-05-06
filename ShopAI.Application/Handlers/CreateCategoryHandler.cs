@@ -6,11 +6,37 @@ namespace ShopAI.Application.Handlers;
 
 public record CreateCategoryCommand(string Name, Guid ShopId, Guid? ParentId = null) : IRequest<Guid>;
 
-public class CreateCategoryHandler(ICategoryRepository categoryRepository) 
+public class CreateCategoryHandler(
+    ICategoryRepository categoryRepository,
+    IShopRepository shopRepository) 
     : IRequestHandler<CreateCategoryCommand, Guid>
 {
     public async Task<Guid> Handle(CreateCategoryCommand request, CancellationToken ct)
     {
+        if (!await shopRepository.ExistsAsync(request.ShopId, ct))
+        {
+            throw new ArgumentException($"Магазин с ID {request.ShopId} не найден.");
+        }
+
+        if (request.ParentId.HasValue)
+        {
+            var parentExists = await categoryRepository.ExistsAsync(request.ParentId.Value, ct);
+            if (!parentExists)
+            {
+                throw new ArgumentException("Указанная родительская категория не существует.");
+            }
+        }
+
+        var isDuplicate = await categoryRepository.AnyAsync(c => 
+            c.Name.ToLower() == request.Name.ToLower() && 
+            c.ShopId == request.ShopId && 
+            c.ParentCategoryId == request.ParentId, ct);
+
+        if (isDuplicate)
+        {
+            throw new InvalidOperationException("Категория с таким именем уже существует в данном разделе.");
+        }
+
         var category = new Category(request.Name, request.ShopId, request.ParentId);
         
         await categoryRepository.AddAsync(category);

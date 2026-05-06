@@ -14,11 +14,60 @@ public record CreateProductCommand(
     int StockQuantity,
     Guid? BrandId) : IRequest<Guid>;
     
-public class CreateProductHandler(IProductRepository productRepository) 
+public class CreateProductHandler(
+    IProductRepository productRepository,
+    ICategoryRepository categoryRepository,
+    IShopRepository shopRepository,
+    IBrandRepository brandRepository) 
     : IRequestHandler<CreateProductCommand, Guid>
 {
-    public async Task<Guid> Handle(CreateProductCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateProductCommand request, CancellationToken ct)
     {
+        if (!await shopRepository.ExistsAsync(request.ShopId, ct))
+        {
+            throw new ArgumentException($"Магазин с ID {request.ShopId} не найден.");
+        }
+
+        var categoryExists = await categoryRepository.ExistsAsync(request.CategoryId, ct);
+        if (!categoryExists)
+        {
+            throw new ArgumentException($"Категория с ID {request.CategoryId} не существует.");
+        }
+        
+        var categories = await categoryRepository.GetByShopIdAsync(request.ShopId);
+        if (categories.All(c => c.Id != request.CategoryId))
+        {
+            throw new InvalidOperationException("Указанная категория не принадлежит данному магазину.");
+        }
+        
+        if (request.BrandId.HasValue)
+        {
+            var brandExists = await brandRepository.ExistsAsync(request.BrandId.Value, ct);
+            if (!brandExists)
+            {
+                throw new ArgumentException("Указанный бренд не найден.");
+            }
+        }
+
+        if (request.Price <= 0)
+        {
+            throw new ArgumentException("Цена товара должна быть больше нуля.");
+        }
+
+        if (request.StockQuantity < 0)
+        {
+            throw new ArgumentException("Количество товара на складе не может быть отрицательным.");
+        }
+
+        var isDuplicate = await productRepository.AnyAsync(p => 
+            p.ShopId == request.ShopId && 
+            p.Name.ToLower() == request.Name.ToLower(), ct);
+
+        if (isDuplicate)
+        {
+            throw new InvalidOperationException("Товар с таким названием уже существует в этом магазине.");
+        }
+
         var product = new Product(
             request.ShopId,
             request.Name,
@@ -31,7 +80,7 @@ public class CreateProductHandler(IProductRepository productRepository)
         );
 
         await productRepository.AddAsync(product);
-        await productRepository.SaveAsync(cancellationToken);
+        await productRepository.SaveAsync(ct);
 
         return product.Id;
     }
