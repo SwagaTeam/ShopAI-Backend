@@ -52,6 +52,8 @@ services.AddSwaggerGen(options =>
 
 services.AddSwaggerGenNewtonsoftSupport();
 
+builder.Services.AddHttpContextAccessor();
+
 services
     .AddEndpointsApiExplorer()
     .AddInfrastructure(builder.Configuration)

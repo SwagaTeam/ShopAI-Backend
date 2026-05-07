@@ -49,7 +49,6 @@ public class AppDbContext : DbContext
         {
             builder.HasKey(s => s.Id);
             builder.HasIndex(s => s.UrlAlias).IsUnique();
-            builder.OwnsOne(s => s.Theme);
 
             // Связь с категориями (один магазин - много категорий)
             builder.HasMany(s => s.Categories)
@@ -95,7 +94,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Order>(builder =>
         {
             builder.HasKey(o => o.Id);
-            builder.OwnsOne(o => o.Customer);
+            builder.HasOne(o => o.User).WithMany().HasForeignKey(o => o.UserId);
 
             // Настраиваем OrderItems как коллекцию сущностей
             builder.HasMany(o => o.Items)
@@ -118,6 +117,33 @@ public class AppDbContext : DbContext
             builder.HasOne(oi => oi.Product)
                    .WithMany()
                    .HasForeignKey(oi => oi.ProductId);
+        });
+
+        // --- CART ---
+        modelBuilder.Entity<Cart>(builder =>
+        {
+            builder.HasKey(c => c.Id);
+
+            // Один пользователь - одна корзина (1-к-1)
+            builder.HasOne(c => c.User)
+                   .WithMany()
+                   .HasForeignKey(c => c.UserId);
+
+            // Связь с айтемами
+            builder.HasMany(c => c.Items)
+                   .WithOne(ci => ci.Cart)
+                   .HasForeignKey(ci => ci.CartId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- CART ITEM ---
+        modelBuilder.Entity<CartItem>(builder =>
+        {
+            builder.HasKey(ci => ci.Id);
+
+            builder.HasOne(ci => ci.Product)
+                   .WithMany()
+                   .HasForeignKey(ci => ci.ProductId);
         });
     }
 }

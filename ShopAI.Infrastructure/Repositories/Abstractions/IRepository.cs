@@ -56,3 +56,12 @@ public interface IRefreshTokenRepository : IRepository<RefreshToken>
 {
     Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken ct = default);
 }
+
+public interface ICartRepository : IRepository<Cart>
+{
+    Task<Cart?> GetByUserIdAsync(Guid userId, CancellationToken ct);
+    Task<CartItem?> GetItemAsync(Guid cartId, Guid productId, CancellationToken ct);
+    Task AddItemAsync(CartItem item);
+    void UpdateItem(CartItem item);
+    void RemoveItem(CartItem item);
+}

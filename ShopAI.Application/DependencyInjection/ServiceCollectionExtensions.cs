@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using ShopAI.Application.Helpers.Abstractions;
+using ShopAI.Application.Helpers.Implementations;
 using ShopAI.Infrastructure.Security;
 
 namespace ShopAI.Application.DependencyInjection;
@@ -18,6 +19,7 @@ public static class ServiceCollectionExtensions
         
         services.AddAutoMapper(_ => {}, assembly);
 
+        services.AddScoped<IUserContext, UserContext>();
         services.AddScoped<IPasswordHasher, Argon2PasswordHasher>();
         services.AddScoped<IJwtProvider, JwtProvider>();
         return services;
