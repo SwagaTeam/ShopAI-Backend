@@ -29,5 +29,7 @@ public class MappingProfile : Profile
 
         // Маппинг для укороченной модели магазина
         CreateMap<Shop, ShopShortDto>();
+
+        CreateMap<Category, CategoryDto>();
     }
 }

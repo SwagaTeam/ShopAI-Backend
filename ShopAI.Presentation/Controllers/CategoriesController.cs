@@ -2,6 +2,7 @@ using System.Net.Mime;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using ShopAI.Application.Handlers;
+using ShopAI.Application.Models;
 
 namespace ShopAI.Presentation.Controllers;
 
@@ -31,5 +32,18 @@ public class CategoriesController(IMediator mediator) : ControllerBase
         var categoryId = await mediator.Send(command);
         
         return CreatedAtAction(nameof(Create), new { id = categoryId }, categoryId);
+    }
+
+    /// <summary>
+    /// Получить все категории конкретного магазина.
+    /// </summary>
+    /// <param name="shopId">Идентификатор магазина.</param>
+    /// <response code="200">Список категорий успешно получен.</response>
+    [HttpGet("shop/{shopId:guid}")]
+    [ProducesResponseType(typeof(List<CategoryDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<CategoryDto>>> GetByShopId(Guid shopId)
+    {
+        var result = await mediator.Send(new GetCategoriesByShopIdQuery(shopId));
+        return Ok(result);
     }
 }
