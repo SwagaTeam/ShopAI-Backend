@@ -25,7 +25,7 @@ public class CreateShopHandler(
         }
 
         // 3. Создание сущности
-        var shop = new Shop(request.Name, request.UrlAlias, ownerId);
+        var shop = new Shop(request.Name, request.Description, request.LogoPath, request.UrlAlias, ownerId);
 
         await shopRepository.AddAsync(shop);
         await shopRepository.SaveAsync(ct);
