@@ -25,6 +25,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBrandRepository, BrandRepository>();
         services.AddScoped<ICartRepository, CartRepository>();
 
+        services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+        services.AddScoped<IRecentlyViewedRepository, RecentlyViewedRepository>();
+        services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
+
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 

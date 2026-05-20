@@ -145,5 +145,52 @@ public class AppDbContext : DbContext
                    .WithMany()
                    .HasForeignKey(ci => ci.ProductId);
         });
+
+        // --- REVIEWS ---
+        modelBuilder.Entity<ProductReview>(builder =>
+        {
+            builder.HasKey(r => r.Id);
+
+            // Ограничение: один пользователь может оставить только один отзыв на один товар
+            builder.HasIndex(r => new { r.UserId, r.ProductId }).IsUnique();
+
+            builder.HasOne(r => r.User)
+                   .WithMany(u => u.Reviews)
+                   .HasForeignKey(r => r.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(r => r.Product)
+                   .WithMany(p => p.Reviews)
+                   .HasForeignKey(r => r.ProductId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- FAVORITES ---
+        modelBuilder.Entity<FavoriteProduct>(builder =>
+        {
+            builder.HasKey(f => f.Id);
+
+            // Товар в избранном у юзера не может дублироваться
+            builder.HasIndex(f => new { f.UserId, f.ProductId }).IsUnique();
+
+            builder.HasOne(f => f.User)
+                   .WithMany(u => u.Favorites)
+                   .HasForeignKey(f => f.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- VIEWED ---
+        modelBuilder.Entity<RecentlyViewedProduct>(builder =>
+        {
+            builder.HasKey(rv => rv.Id);
+
+            // Индекс для быстрой сортировки по дате просмотра
+            builder.HasIndex(rv => new { rv.UserId, rv.ViewedAtUtc });
+
+            builder.HasOne(rv => rv.User)
+                   .WithMany(u => u.RecentlyViewed)
+                   .HasForeignKey(rv => rv.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

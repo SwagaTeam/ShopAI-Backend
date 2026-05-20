@@ -1,5 +1,6 @@
-﻿using Domain.Entities;
-using Domain.Entities.Abstractions;
+﻿using Domain.Entities.Abstractions;
+
+namespace Domain.Entities;
 
 public class Product : Entity
 {
@@ -38,4 +39,6 @@ public class Product : Entity
     public virtual Shop Shop { get; set; }
     public virtual Category Category { get; set; }
     public virtual Brand? Brand { get; set; }
+
+    public virtual ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
 }

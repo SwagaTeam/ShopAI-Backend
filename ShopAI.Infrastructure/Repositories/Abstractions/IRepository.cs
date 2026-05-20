@@ -26,6 +26,7 @@ public interface IShopRepository : IRepository<Shop>
 public interface IProductRepository : IRepository<Product>
 {
     Task<List<Product>> GetByShopIdAsync(Guid shopId);
+    Task<Product?> GetByIdWithDetailsAsync(Guid id);
     Task<List<Product>> GetLatestAsync(int count);
     Task<List<Product>> GetPopularAsync(int count);
     Task<List<Product>> GetProductsByShopAndCategoryAsync(Guid shopId, Guid categoryId);
@@ -64,4 +65,22 @@ public interface ICartRepository : IRepository<Cart>
     Task AddItemAsync(CartItem item);
     void UpdateItem(CartItem item);
     void RemoveItem(CartItem item);
+}
+
+public interface IFavoriteRepository : IRepository<FavoriteProduct>
+{
+    Task<FavoriteProduct?> GetFavoriteAsync(Guid userId, Guid productId, CancellationToken ct);
+    Task<List<Product>> GetUserFavoritesAsync(Guid userId, CancellationToken ct);
+}
+
+public interface IRecentlyViewedRepository : IRepository<RecentlyViewedProduct>
+{
+    Task TrackViewAsync(Guid userId, Guid productId, CancellationToken ct);
+    Task<List<Product>> GetHistoryAsync(Guid userId, int limit, CancellationToken ct);
+}
+
+public interface IProductReviewRepository : IRepository<ProductReview>
+{
+    Task<bool> HasUserReviewedProductAsync(Guid userId, Guid productId, CancellationToken ct);
+    Task<List<ProductReview>> GetByProductIdAsync(Guid productId, int skip, int take, CancellationToken ct);
 }

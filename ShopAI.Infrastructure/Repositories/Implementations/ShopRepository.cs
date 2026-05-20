@@ -6,6 +6,13 @@ namespace ShopAI.Infrastructure.Repositories.Implementations;
 
 public class ShopRepository(AppDbContext context) : Repository<Shop>(context), IShopRepository
 {
+    public override async Task<Shop?> GetByIdAsync(Guid id)
+    {
+        return await _context.Shops
+            .Include(s => s.Owner)
+            .FirstOrDefaultAsync(s => s.Id == id);
+    }
+
     public async Task<Shop?> GetByUrlAliasAsync(string alias) 
         => await _context.Shops.FirstOrDefaultAsync(s => s.UrlAlias == alias.ToLower());
 

@@ -1,4 +1,5 @@
-﻿using Domain.Entities.Abstractions;
+﻿using Domain.Entities;
+using Domain.Entities.Abstractions;
 
 public class OrderItem : Entity
 {

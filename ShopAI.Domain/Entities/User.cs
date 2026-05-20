@@ -11,5 +11,8 @@ namespace Domain.Entities
         public required string Salt { get; set; }
 
         public virtual ICollection<Shop> Shops { get; set; } = new List<Shop>();
+        public virtual ICollection<FavoriteProduct> Favorites { get; set; } = new List<FavoriteProduct>();
+        public virtual ICollection<RecentlyViewedProduct> RecentlyViewed { get; set; } = new List<RecentlyViewedProduct>();
+        public virtual ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
     }
 }

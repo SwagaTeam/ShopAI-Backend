@@ -6,6 +6,15 @@ namespace ShopAI.Infrastructure.Repositories.Implementations;
 
 public class ProductRepository(AppDbContext context) : Repository<Product>(context), IProductRepository
 {
+    public async Task<Product?> GetByIdWithDetailsAsync(Guid id)
+    {
+        return await _context.Products
+            .Include(p => p.Shop)
+            .Include(p => p.Brand)
+            .Include(p => p.Category)
+            .FirstOrDefaultAsync(p => p.Id == id) ?? null;
+    }
+
     public async Task<List<Product>> GetByShopIdAsync(Guid shopId)
         => await _context.Products.Where(p => p.ShopId == shopId).ToListAsync();
 

@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AutoMapper;
+using MediatR;
 using ShopAI.Application.Models;
 using ShopAI.Infrastructure.Repositories.Abstractions;
 
@@ -8,7 +9,8 @@ public record GetShopByIdQuery(Guid Id) : IRequest<ShopDto>;
 
 public class GetShopByIdHandler(
     IShopRepository shopRepository,
-    IUserRepository userRepository)
+    IUserRepository userRepository,
+    IMapper mapper)
     : IRequestHandler<GetShopByIdQuery, ShopDto>
 {
     public async Task<ShopDto> Handle(GetShopByIdQuery request, CancellationToken ct)
@@ -25,12 +27,6 @@ public class GetShopByIdHandler(
         var owner = await userRepository.GetByIdAsync(shop.OwnerId);
 
         // 3. Маппинг сущности на ViewModel
-        return new ShopDto(
-            shop.Id,
-            shop.Name,
-            shop.UrlAlias,
-            shop.OwnerId,
-            owner?.FullName ?? "Неизвестный владелец"
-        );
+        return mapper.Map<ShopDto>(shop);
     }
 }

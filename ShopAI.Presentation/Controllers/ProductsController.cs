@@ -2,6 +2,7 @@ using System.ComponentModel;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using ShopAI.Application.Handlers;
+using ShopAI.Application.Models;
 
 namespace ShopAI.Presentation.Controllers;
 
@@ -48,7 +49,29 @@ public class ProductsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<Guid>> Create([FromBody] CreateProductCommand command)
     {
         var productId = await mediator.Send(command);
-        
-        return CreatedAtAction(nameof(GetMainPage), new { id = productId }, productId);
+
+        return CreatedAtAction(nameof(GetById), new { id = productId }, productId);
+    }
+
+    /// <summary>
+    /// Получение детальной информации о конкретном товаре по его ID.
+    /// </summary>
+    /// <param name="id">Идентификатор товара (GUID).</param>
+    /// <response code="200">Данные товара успешно получены.</response>
+    /// <response code="404">Товар с указанным ID не найден.</response>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ProductDetailsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProductDetailsDto>> GetById(Guid id)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetProductByIdQuery(id));
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 }

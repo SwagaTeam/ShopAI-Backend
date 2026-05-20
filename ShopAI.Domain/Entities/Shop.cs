@@ -19,6 +19,8 @@ public class Shop : Entity
     }
 
     public string Name { get; set; }
+    public string Description { get; set; }
+    public string LogoPath { get; set; }
     public string UrlAlias { get; set; }
     public Guid OwnerId { get; set; }
     public User Owner { get; set; }
