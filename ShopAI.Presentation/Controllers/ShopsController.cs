@@ -42,7 +42,7 @@ public class ShopsController(IMediator mediator) : ControllerBase
     /// Владельцем магазина автоматически становится пользователь, чей токен использован в запросе.
     /// UrlAlias должен быть уникальным в пределах всей системы.
     /// </remarks>
-    /// <param name="command">Объект с названием и коротким URL-именем магазина.</param>
+    /// <param name="command">Объект с названием, описанием, лого и коротким URL-именем магазина.</param>
     /// <returns>Идентификатор (GUID) созданного магазина.</returns>
     /// <response code="201">Магазин успешно создан.</response>
     /// <response code="400">Ошибка валидации или дубликат UrlAlias.</response>

@@ -12,8 +12,7 @@ namespace ShopAI.Infrastructure.Repositories.Implementations
         public async Task<Cart?> GetByUserIdAsync(Guid userId, CancellationToken ct)
         {
             return await _context.Set<Cart>()
-                // Включаем айтемы корзины и данные о самих продуктах для отображения (имя, цена и т.д.)
-                .Include(c => _context.Set<CartItem>().Where(ci => ci.CartId == c.Id))
+                .Include(c => c.Items)
                     .ThenInclude(ci => ci.Product)
                 .FirstOrDefaultAsync(c => c.UserId == userId, ct);
         }

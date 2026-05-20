@@ -8,15 +8,10 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-
-        // Маппинг для товаров
+        // Маппинг для списков товаров
         CreateMap<Product, ProductShortDto>()
             .ForMember(d => d.ShopName, opt => opt.MapFrom(s => s.Shop.Name))
             .ForMember(d => d.BrandName, opt => opt.MapFrom(s => s.Brand != null ? s.Brand.Name : null));
-
-        // Маппинг для отзывов
-        CreateMap<ProductReview, ProductReviewDto>()
-            .ForMember(d => d.UserName, opt => opt.MapFrom(s => s.User != null ? s.User.FullName : "Аноним"));
 
         // Детальный маппинг для одного товара
         CreateMap<Product, ProductDetailsDto>()
@@ -24,9 +19,15 @@ public class MappingProfile : Profile
             .ForMember(d => d.ShopName, opt => opt.MapFrom(s => s.Shop.Name))
             .ForMember(d => d.BrandName, opt => opt.MapFrom(s => s.Brand != null ? s.Brand.Name : null));
 
-        CreateMap<Shop, ShopDto>()
-            .ForMember(d => d.OwnerName, opt => opt.MapFrom(s => s.Owner != null ? s.Owner.FullName : "Неизвестно"));
+        // Маппинг для отзывов
+        CreateMap<ProductReview, ProductReviewDto>()
+            .ForMember(d => d.UserName, opt => opt.MapFrom(s => s.User != null ? s.User.FullName : "Аноним"));
 
+        // Маппинг для полной модели магазина
+        CreateMap<Shop, ShopDto>()
+            .ForMember(d => d.OwnerName, opt => opt.MapFrom(s => s.Owner != null ? s.Owner.FullName : "Неизвестный владелец"));
+
+        // Маппинг для укороченной модели магазина
         CreateMap<Shop, ShopShortDto>();
     }
 }

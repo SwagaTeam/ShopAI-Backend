@@ -8,19 +8,21 @@ public class Shop : Entity
 {
     protected Shop() { }
 
-    public Shop(string name, string urlAlias, Guid ownerId)
+    public Shop(string name, string description, string logoPath, string urlAlias, Guid ownerId)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name required");
 
         Name = name;
+        Description = description;
+        LogoPath = logoPath;
         UrlAlias = urlAlias.ToLower();
         OwnerId = ownerId;
     }
 
     public string Name { get; set; }
-    public string Description { get; set; }
-    public string LogoPath { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public string LogoPath { get; set; } = string.Empty;
     public string UrlAlias { get; set; }
     public Guid OwnerId { get; set; }
     public User Owner { get; set; }

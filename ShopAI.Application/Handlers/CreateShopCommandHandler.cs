@@ -5,7 +5,7 @@ using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers;
 
-public record CreateShopCommand(string Name, string UrlAlias) : IRequest<Guid>;
+public record CreateShopCommand(string Name, string Description, string LogoPath, string UrlAlias) : IRequest<Guid>;
 
 public class CreateShopHandler(
     IShopRepository shopRepository,
