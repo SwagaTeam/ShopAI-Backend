@@ -31,5 +31,7 @@ public class MappingProfile : Profile
         CreateMap<Shop, ShopShortDto>();
 
         CreateMap<Category, CategoryDto>();
+
+        CreateMap<Brand, BrandDto>();
     }
 }
