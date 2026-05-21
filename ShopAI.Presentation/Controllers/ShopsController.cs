@@ -114,4 +114,21 @@ public class ShopsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new GetShopByIdQuery(id));
         return Ok(result);
     }
+
+    /// <summary>
+    /// Получить список магазинов текущего авторизованного пользователя.
+    /// </summary>
+    /// <remarks>
+    /// Возвращает все магазины, владельцем которых является пользователь (определяется по JWT токену).
+    /// </remarks>
+    /// <returns>Список магазинов пользователя.</returns>
+    /// <response code="200">Успешное получение списка.</response>
+    /// <response code="401">Пользователь не авторизован.</response>
+    [HttpGet("my")]
+    [ProducesResponseType(typeof(List<ShopDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<ShopDto>>> GetMyShops()
+    {
+        var result = await mediator.Send(new GetMyShopsQuery());
+        return Ok(result);
+    }
 }

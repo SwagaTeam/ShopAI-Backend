@@ -19,6 +19,7 @@ public interface IRepository<T> where T : Entity
 
 public interface IShopRepository : IRepository<Shop>
 {
+    Task<List<Shop>> GetByOwnerIdAsync(Guid ownerId, CancellationToken ct = default);
     Task<Shop?> GetByUrlAliasAsync(string alias);
     Task<List<Shop>> GetShopsByCategoryAsync(Guid categoryId);
 }

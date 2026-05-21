@@ -24,4 +24,13 @@ public class ShopRepository(AppDbContext context) : Repository<Shop>(context), I
             .Distinct()
             .ToListAsync();
     }
+
+    public async Task<List<Shop>> GetByOwnerIdAsync(Guid ownerId, CancellationToken ct = default)
+    {
+        return await _context.Set<Shop>()
+            .AsNoTracking() // Отключаем трекинг для быстрого чтения
+            .Include(s => s.Owner) // Инклудим Owner, чтобы маппер смог заполнить поле OwnerName в ShopDto
+            .Where(s => s.OwnerId == ownerId)
+            .ToListAsync(ct);
+    }
 }
