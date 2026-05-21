@@ -9,7 +9,7 @@ namespace ShopAI.Application.Handlers;
 public record MainPageProductsVm(List<ProductShortDto> Latest, List<ProductShortDto> Popular);
 public record GetMainPageProductsQuery(int Count) : IRequest<MainPageProductsVm>;
 
-public class GetMainPageProductsHandler(
+public class GetMainPageProductsQueryHandler(
     IProductRepository productRepository, 
     IMapper mapper) 
     : IRequestHandler<GetMainPageProductsQuery, MainPageProductsVm>

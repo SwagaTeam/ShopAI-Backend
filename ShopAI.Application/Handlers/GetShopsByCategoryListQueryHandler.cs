@@ -9,7 +9,7 @@ public record ShopsByCategoryVm(string CategoryName, List<ShopShortDto> Shops);
 
 public record GetShopsByCategoryListQuery : IRequest<List<ShopsByCategoryVm>>;
 
-public class GetShopsByCategoryListHandler(
+public class GetShopsByCategoryListQueryHandler(
     ICategoryRepository categoryRepository,
     IMapper mapper) 
     : IRequestHandler<GetShopsByCategoryListQuery, List<ShopsByCategoryVm>>

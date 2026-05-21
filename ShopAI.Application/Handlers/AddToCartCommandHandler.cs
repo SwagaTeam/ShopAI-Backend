@@ -12,7 +12,7 @@ namespace ShopAI.Application.Handlers;
 /// <param name="Quantity">Количество (по умолчанию 1).</param>
 public record AddToCartCommand(Guid ProductId, int Quantity = 1) : IRequest<Guid>;
 
-public class AddToCartHandler(
+public class AddToCartCommandHandler(
     ICartRepository cartRepository,
     IProductRepository productRepository,
     IUserContext userContext) : IRequestHandler<AddToCartCommand, Guid>

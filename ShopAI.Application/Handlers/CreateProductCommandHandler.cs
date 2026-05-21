@@ -14,7 +14,7 @@ public record CreateProductCommand(
     int StockQuantity,
     Guid? BrandId) : IRequest<Guid>;
     
-public class CreateProductHandler(
+public class CreateProductCommandHandler(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository,
     IShopRepository shopRepository,

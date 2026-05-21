@@ -6,7 +6,7 @@ namespace ShopAI.Application.Handlers;
 
 public record CreateCategoryCommand(string Name, Guid ShopId, Guid? ParentId = null) : IRequest<Guid>;
 
-public class CreateCategoryHandler(
+public class CreateCategoryCommandHandler(
     ICategoryRepository categoryRepository,
     IShopRepository shopRepository) 
     : IRequestHandler<CreateCategoryCommand, Guid>
