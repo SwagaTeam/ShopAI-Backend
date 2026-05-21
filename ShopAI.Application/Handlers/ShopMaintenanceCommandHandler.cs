@@ -1,18 +1,21 @@
-﻿using Domain.Entities;
+﻿using AutoMapper;
+using Domain.Entities;
 using MediatR;
 using ShopAI.Application.Helpers.Abstractions;
+using ShopAI.Application.Models;
 using ShopAI.Infrastructure.Repositories.Abstractions;
 
-public record UpdateShopCommand(Guid Id, string Name, string UrlAlias) : IRequest<Shop>;
+public record UpdateShopCommand(Guid Id, string Name, string UrlAlias) : IRequest<ShopDto>;
 public record DeleteShopCommand(Guid Id) : IRequest<Guid>;
 
 public class ShopMaintenanceHandler(
     IShopRepository shopRepository,
-    IUserContext userContext)
-    : IRequestHandler<UpdateShopCommand, Shop>,
+    IUserContext userContext,
+    IMapper mapper)
+    : IRequestHandler<UpdateShopCommand, ShopDto>,
       IRequestHandler<DeleteShopCommand, Guid>
 {
-    public async Task<Shop> Handle(UpdateShopCommand request, CancellationToken ct)
+    public async Task<ShopDto> Handle(UpdateShopCommand request, CancellationToken ct)
     {
         var shop = await shopRepository.GetByIdAsync(request.Id)
                    ?? throw new KeyNotFoundException("Магазин не найден.");
@@ -34,7 +37,7 @@ public class ShopMaintenanceHandler(
 
         shopRepository.Update(shop);
         await shopRepository.SaveAsync(ct);
-        return shop;
+        return mapper.Map<ShopDto>(shop);
     }
 
     public async Task<Guid> Handle(DeleteShopCommand request, CancellationToken ct)

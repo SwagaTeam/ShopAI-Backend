@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -68,7 +69,7 @@ public class ShopsController(IMediator mediator) : ControllerBase
     /// <response code="403">Попытка редактирования чужого магазина.</response>
     /// <response code="404">Магазин с таким ID не существует.</response>
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(Unit), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ShopDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateShopRequest request)
@@ -130,5 +131,31 @@ public class ShopsController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetMyShopsQuery());
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Получить список товаров конкретного магазина (с пагинацией).
+    /// </summary>
+    /// <param name="shopId">Идентификатор магазина (GUID).</param>
+    /// <param name="page">Номер страницы (начиная с 1).</param>
+    /// <param name="pageSize">Количество товаров на одной странице.</param>
+    [HttpGet("{shopId:guid}/products")]
+    [ProducesResponseType(typeof(PagedListDto<ProductShortDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetProducts(
+        Guid shopId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        try
+        {
+            var query = new GetShopProductsQuery(shopId, page, pageSize);
+            var result = await mediator.Send(query);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
     }
 }
