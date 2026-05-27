@@ -96,6 +96,29 @@ public class ProductsController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
+    /// Удалить товар по идентификатору.
+    /// </summary>
+    /// <param name="id">Идентификатор товара (GUID).</param>
+    /// <response code="204">Товар успешно удален.</response>
+    /// <response code="404">Товар не найден.</response>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        try
+        {
+            await mediator.Send(new DeleteProductCommand(id));
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Получение детальной информации о конкретном товаре по его ID.
     /// </summary>
     /// <param name="id">Идентификатор товара (GUID).</param>

@@ -9,6 +9,10 @@ namespace ShopAI.Api.Controllers;
 [Route("api/[controller]")]
 public class BrandsController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Получить список всех брендов.
+    /// </summary>
+    /// <response code="200">Список брендов успешно получен.</response>
     [HttpGet]
     [ProducesResponseType(typeof(List<BrandDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<BrandDto>>> GetAll()
@@ -17,6 +21,12 @@ public class BrandsController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Получить бренд по идентификатору.
+    /// </summary>
+    /// <param name="id">Идентификатор бренда (GUID).</param>
+    /// <response code="200">Бренд найден.</response>
+    /// <response code="404">Бренд не найден.</response>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(BrandDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -33,6 +43,12 @@ public class BrandsController(IMediator mediator) : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Создать новый бренд.
+    /// </summary>
+    /// <param name="command">Данные бренда: название и ссылка на логотип.</param>
+    /// <response code="201">Бренд успешно создан.</response>
+    /// <response code="400">Некорректные данные запроса.</response>
     [HttpPost]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -49,6 +65,14 @@ public class BrandsController(IMediator mediator) : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Обновить существующий бренд.
+    /// </summary>
+    /// <param name="id">Идентификатор бренда (GUID).</param>
+    /// <param name="request">Новые данные бренда.</param>
+    /// <response code="204">Бренд успешно обновлен.</response>
+    /// <response code="400">Некорректные данные запроса.</response>
+    /// <response code="404">Бренд не найден.</response>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -72,6 +96,12 @@ public class BrandsController(IMediator mediator) : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Удалить бренд.
+    /// </summary>
+    /// <param name="id">Идентификатор бренда (GUID).</param>
+    /// <response code="204">Бренд успешно удален.</response>
+    /// <response code="404">Бренд не найден.</response>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -4,10 +4,25 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
-      - Minio__Endpoint=minio:9000
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Minio__Endpoint=${MINIO_ENDPOINT}
       - Minio__AccessKey=${MINIO_ROOT_USER}
       - Minio__SecretKey=${MINIO_ROOT_PASSWORD}
-      - Minio__Bucket=${MINIO_BUCKET:-shopai-images}
+      - Minio__Bucket=${MINIO_BUCKET}
+      - Minio__UseSsl=${MINIO_USE_SSL}
+      - Admin__Email=${ADMIN_EMAIL}
+      - Admin__Password=${ADMIN_PASSWORD}
+      - Admin__FullName=${ADMIN_FULL_NAME}
+      - Admin__Phone=${ADMIN_PHONE}
+      - OpenRouter__BaseUrl=${OPENROUTER_BASE_URL}
+      - OpenRouter__Model=${OPENROUTER_MODEL}
+      - OpenRouter__FallbackModels=${OPENROUTER_FALLBACK_MODELS}
+      - OpenRouter__MaxTokens=${OPENROUTER_MAX_TOKENS}
+      - OpenRouter__Temperature=${OPENROUTER_TEMPERATURE}
+      - OpenRouter__TopP=${OPENROUTER_TOP_P}
+      - OpenRouter__ApiKey=${OPENROUTER_API_KEY}
     ports:
       - "5000:8080"
     volumes:
