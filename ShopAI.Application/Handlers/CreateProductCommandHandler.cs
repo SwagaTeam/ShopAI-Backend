@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Domain.Entities;
 using MediatR;
 using ShopAI.Infrastructure.Repositories.Abstractions;
@@ -12,13 +13,15 @@ public record CreateProductCommand(
     string Description,
     string ImageUrl,
     int StockQuantity,
-    Guid? BrandId) : IRequest<Guid>;
-    
+    Guid? BrandId,
+    List<string>? Tags,
+    Dictionary<string, string>? Attributes) : IRequest<Guid>;
+
 public class CreateProductCommandHandler(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository,
     IShopRepository shopRepository,
-    IBrandRepository brandRepository) 
+    IBrandRepository brandRepository)
     : IRequestHandler<CreateProductCommand, Guid>
 {
     public async Task<Guid> Handle(CreateProductCommand request, CancellationToken ct)
@@ -33,13 +36,13 @@ public class CreateProductCommandHandler(
         {
             throw new ArgumentException($"Категория с ID {request.CategoryId} не существует.");
         }
-        
+
         var categories = await categoryRepository.GetByShopIdAsync(request.ShopId);
         if (categories.All(c => c.Id != request.CategoryId))
         {
             throw new InvalidOperationException("Указанная категория не принадлежит данному магазину.");
         }
-        
+
         if (request.BrandId.HasValue)
         {
             var brandExists = await brandRepository.ExistsAsync(request.BrandId.Value, ct);
@@ -59,8 +62,8 @@ public class CreateProductCommandHandler(
             throw new ArgumentException("Количество товара на складе не может быть отрицательным.");
         }
 
-        var isDuplicate = await productRepository.AnyAsync(p => 
-            p.ShopId == request.ShopId && 
+        var isDuplicate = await productRepository.AnyAsync(p =>
+            p.ShopId == request.ShopId &&
             p.Name.ToLower() == request.Name.ToLower(), ct);
 
         if (isDuplicate)
@@ -78,6 +81,15 @@ public class CreateProductCommandHandler(
             request.StockQuantity,
             request.BrandId
         );
+
+        var tags = (request.Tags ?? [])
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => t.Trim().ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        product.Tags = string.Join(",", tags);
+        product.AttributesJson = JsonSerializer.Serialize(request.Attributes ?? new Dictionary<string, string>());
 
         await productRepository.AddAsync(product);
         await productRepository.SaveAsync(ct);

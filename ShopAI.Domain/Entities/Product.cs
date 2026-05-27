@@ -35,6 +35,8 @@ public class Product : Entity
     public int StockQuantity { get; set; }
     public Guid CategoryId { get; set; }
     public Guid? BrandId { get; set; }
+    public string Tags { get; set; } = string.Empty;
+    public string AttributesJson { get; set; } = "{}";
 
     public virtual Shop Shop { get; set; }
     public virtual Category Category { get; set; }

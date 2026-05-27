@@ -79,6 +79,8 @@ public class AppDbContext : DbContext
         {
             builder.HasKey(p => p.Id);
             builder.Property(p => p.Price).HasPrecision(18, 2);
+            builder.Property(p => p.Tags).HasMaxLength(2000).HasDefaultValue(string.Empty);
+            builder.Property(p => p.AttributesJson).HasColumnType("jsonb").HasDefaultValue("{}");
 
             // Связь с магазином
             builder.HasOne(p => p.Shop)

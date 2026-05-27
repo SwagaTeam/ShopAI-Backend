@@ -55,6 +55,46 @@ public class ProductsController(IMediator mediator) : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = productId }, productId);
     }
 
+    [HttpPut("{id:guid}/tags")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SetTags(Guid id, [FromBody] List<string> tags)
+    {
+        await mediator.Send(new SetProductTagsCommand(id, tags));
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/tags")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AddTags(Guid id, [FromBody] List<string> tags)
+    {
+        await mediator.Send(new AddProductTagsCommand(id, tags));
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/tags")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RemoveTags(Guid id, [FromBody] List<string> tags)
+    {
+        await mediator.Send(new RemoveProductTagsCommand(id, tags));
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/attributes")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SetAttributes(Guid id, [FromBody] Dictionary<string, string> attributes)
+    {
+        await mediator.Send(new SetProductAttributesCommand(id, attributes));
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/attributes/{key}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RemoveAttribute(Guid id, string key)
+    {
+        await mediator.Send(new RemoveProductAttributeCommand(id, key));
+        return NoContent();
+    }
+
     /// <summary>
     /// Получение детальной информации о конкретном товаре по его ID.
     /// </summary>
