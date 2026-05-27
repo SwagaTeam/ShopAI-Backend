@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
             // Пароль и соль — просто строки, но можно ограничить длину
             builder.Property(u => u.Password).IsRequired();
             builder.Property(u => u.Salt).IsRequired();
+            builder.Property(u => u.Role).HasMaxLength(20).IsRequired();
 
             // Связь: Один пользователь - Много магазинов
             builder.HasMany(u => u.Shops)

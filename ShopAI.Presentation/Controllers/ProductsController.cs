@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShopAI.Application.Handlers;
 using ShopAI.Application.Models;
@@ -43,6 +44,7 @@ public class ProductsController(IMediator mediator) : ControllerBase
     /// <response code="400">Ошибка валидации входных данных.</response>
     /// <response code="404">Указанный магазин или категория не найдены.</response>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

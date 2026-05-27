@@ -30,7 +30,8 @@ public class JwtProvider(IConfiguration configuration) : IJwtProvider
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim("FullName", user.FullName)
+            new Claim("FullName", user.FullName),
+            new Claim(ClaimTypes.Role, user.Role)
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor

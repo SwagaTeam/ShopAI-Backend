@@ -49,6 +49,7 @@ public class ShopsController(IMediator mediator) : ControllerBase
     /// <response code="400">Ошибка валидации или дубликат UrlAlias.</response>
     /// <response code="401">Пользователь не авторизован.</response>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Guid>> Create([FromBody] CreateShopCommand command)
@@ -69,6 +70,7 @@ public class ShopsController(IMediator mediator) : ControllerBase
     /// <response code="403">Попытка редактирования чужого магазина.</response>
     /// <response code="404">Магазин с таким ID не существует.</response>
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(ShopDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -89,6 +91,7 @@ public class ShopsController(IMediator mediator) : ControllerBase
     /// <response code="200">Магазин успешно удален.</response>
     /// <response code="403">Недостаточно прав для удаления.</response>
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Delete(Guid id)
@@ -126,6 +129,7 @@ public class ShopsController(IMediator mediator) : ControllerBase
     /// <response code="200">Успешное получение списка.</response>
     /// <response code="401">Пользователь не авторизован.</response>
     [HttpGet("my")]
+    [Authorize(Roles = "User,Admin")]
     [ProducesResponseType(typeof(List<ShopDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<ShopDto>>> GetMyShops()
     {

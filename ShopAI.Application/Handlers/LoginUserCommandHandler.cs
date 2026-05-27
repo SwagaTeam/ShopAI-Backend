@@ -1,8 +1,9 @@
-﻿using MediatR;
-using ShopAI.Application.Models;
-using ShopAI.Application.Helpers.Abstractions;
-using ShopAI.Infrastructure.Repositories.Abstractions;
 using Domain.Entities;
+using MediatR;
+using Microsoft.Extensions.Configuration;
+using ShopAI.Application.Helpers.Abstractions;
+using ShopAI.Application.Models;
+using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers;
 
@@ -12,7 +13,8 @@ public class LoginUserCommandHandler(
     IUserRepository userRepository,
     IRefreshTokenRepository refreshTokenRepository,
     IPasswordHasher passwordHasher,
-    IJwtProvider jwtProvider)
+    IJwtProvider jwtProvider,
+    IConfiguration configuration)
     : IRequestHandler<LoginUserCommand, AuthResponse>
 {
     public async Task<AuthResponse> Handle(LoginUserCommand request, CancellationToken ct)
@@ -30,6 +32,11 @@ public class LoginUserCommandHandler(
             throw new UnauthorizedAccessException("Неверный email или пароль.");
         }
 
+        if (IsConfiguredAdminEmail(user.Email) && user.Role != User.AdminRole)
+        {
+            user.Role = User.AdminRole;
+        }
+
         var tokens = jwtProvider.GenerateTokens(user);
 
         var refreshToken = new RefreshToken
@@ -44,5 +51,12 @@ public class LoginUserCommandHandler(
         await refreshTokenRepository.SaveAsync(ct);
 
         return new AuthResponse(tokens.AccessToken, tokens.RefreshToken);
+    }
+
+    private bool IsConfiguredAdminEmail(string email)
+    {
+        var adminEmail = configuration["Admin:Email"];
+        return !string.IsNullOrWhiteSpace(adminEmail)
+               && string.Equals(email.Trim(), adminEmail.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 }

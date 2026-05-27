@@ -9,7 +9,7 @@ namespace ShopAI.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = "User,Admin")]
 [Produces(MediaTypeNames.Application.Json)]
 public class CartController(IMediator mediator) : ControllerBase
 {

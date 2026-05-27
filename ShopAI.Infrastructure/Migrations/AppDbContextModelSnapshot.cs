@@ -324,6 +324,11 @@ namespace ShopAI.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Salt")
                         .IsRequired()
                         .HasColumnType("text");

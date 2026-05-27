@@ -21,7 +21,7 @@ public class ShopMaintenanceHandler(
                    ?? throw new KeyNotFoundException("Магазин не найден.");
 
         // Проверка прав (только владелец может менять)
-        if (shop.OwnerId != userContext.UserId)
+        if (!userContext.IsAdmin && shop.OwnerId != userContext.UserId)
             throw new UnauthorizedAccessException("У вас нет прав на редактирование этого магазина.");
 
         // Проверка уникальности нового Alias, если он изменился
@@ -45,7 +45,7 @@ public class ShopMaintenanceHandler(
         var shop = await shopRepository.GetByIdAsync(request.Id)
                    ?? throw new KeyNotFoundException("Магазин не найден.");
 
-        if (shop.OwnerId != userContext.UserId)
+        if (!userContext.IsAdmin && shop.OwnerId != userContext.UserId)
             throw new UnauthorizedAccessException("У вас нет прав на удаление этого магазина.");
 
         shopRepository.Delete(shop);

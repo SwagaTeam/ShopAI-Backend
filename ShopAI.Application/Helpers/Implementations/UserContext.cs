@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using ShopAI.Application.Helpers.Abstractions;
 
@@ -21,5 +22,9 @@ namespace ShopAI.Application.Helpers.Implementations
                 return userId;
             }
         }
+
+        public string? Role => httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value;
+
+        public bool IsAdmin => Role == User.AdminRole;
     }
 }

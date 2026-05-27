@@ -1,5 +1,6 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 using ShopAI.Application.Helpers.Abstractions;
 using ShopAI.Infrastructure.Repositories.Abstractions;
 
@@ -9,7 +10,8 @@ public record RegisterUserCommand(string FullName, string Email, string Phone, s
 
 public class RegisterUserCommandHandler(
     IUserRepository userRepository,
-    IPasswordHasher passwordHasher)
+    IPasswordHasher passwordHasher,
+    IConfiguration configuration)
     : IRequestHandler<RegisterUserCommand, Guid>
 {
     public async Task<Guid> Handle(RegisterUserCommand request, CancellationToken ct)
@@ -21,6 +23,7 @@ public class RegisterUserCommandHandler(
         }
 
         var (hash, salt) = passwordHasher.Hash(request.Password);
+        var role = IsConfiguredAdminEmail(request.Email) ? User.AdminRole : User.UserRole;
 
         var user = new User
         {
@@ -28,12 +31,20 @@ public class RegisterUserCommandHandler(
             Email = request.Email.ToLower(),
             Phone = request.Phone,
             Password = hash,
-            Salt = salt
+            Salt = salt,
+            Role = role
         };
 
         await userRepository.AddAsync(user);
         await userRepository.SaveAsync(ct);
 
         return user.Id;
+    }
+
+    private bool IsConfiguredAdminEmail(string email)
+    {
+        var adminEmail = configuration["Admin:Email"];
+        return !string.IsNullOrWhiteSpace(adminEmail)
+               && string.Equals(email.Trim(), adminEmail.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 }
