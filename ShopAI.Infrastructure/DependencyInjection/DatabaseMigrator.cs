@@ -1,4 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
 using Domain.Entities;
+using Konscious.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +37,8 @@ namespace ShopAI.Infrastructure.DependencyInjection
         private async Task SeedAdminAsync(AppDbContext context, IConfiguration configuration, CancellationToken cancellationToken)
         {
             var adminEmail = configuration["Admin:Email"];
-            if (string.IsNullOrWhiteSpace(adminEmail))
+            var adminPassword = configuration["Admin:Password"];
+            if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
             {
                 return;
             }
@@ -42,16 +46,55 @@ namespace ShopAI.Infrastructure.DependencyInjection
             var normalizedEmail = adminEmail.Trim().ToLowerInvariant();
             var admin = await context.Users.SingleOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
 
-            if (admin != null && admin.Role != User.AdminRole)
+            if (admin == null)
+            {
+                var (hash, salt) = HashPassword(adminPassword);
+                admin = new User
+                {
+                    Email = normalizedEmail,
+                    Role = User.AdminRole,
+                    Password = hash,
+                    Salt = salt,
+                    FullName = configuration["Admin:FullName"] ?? "Default Admin",
+                    Phone = configuration["Admin:Phone"] ?? "+70000000001"
+                };
+
+                await context.Users.AddAsync(admin, cancellationToken);
+                await context.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Seed created admin user for {Email}", normalizedEmail);
+                return;
+            }
+
+            if (admin.Role != User.AdminRole)
             {
                 admin.Role = User.AdminRole;
-                logger.LogInformation("Seed promoted existing user to Admin for {Email}", normalizedEmail);
                 await context.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Seed promoted existing user to Admin for {Email}", normalizedEmail);
             }
-            else if (admin == null)
+        }
+
+        private static (string Hash, string Salt) HashPassword(string password)
+        {
+            const int degreeOfParallelism = 8;
+            const int memorySize = 65536;
+            const int iterations = 4;
+            const int hashLength = 32;
+            const int saltLength = 16;
+
+            var saltBytes = new byte[saltLength];
+            RandomNumberGenerator.Fill(saltBytes);
+
+            var passwordBytes = Encoding.UTF8.GetBytes(password);
+            using var argon2 = new Argon2id(passwordBytes)
             {
-                logger.LogWarning("Admin seed email {Email} not found in Users. Register this email first, then restart app.", normalizedEmail);
-            }
+                Salt = saltBytes,
+                DegreeOfParallelism = degreeOfParallelism,
+                MemorySize = memorySize,
+                Iterations = iterations
+            };
+
+            var hashBytes = argon2.GetBytes(hashLength);
+            return (Convert.ToBase64String(hashBytes), Convert.ToBase64String(saltBytes));
         }
     }
 }
