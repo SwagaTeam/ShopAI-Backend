@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<FileMetadata> FileMetadatas => Set<FileMetadata>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -192,6 +193,26 @@ public class AppDbContext : DbContext
                    .WithMany(u => u.RecentlyViewed)
                    .HasForeignKey(rv => rv.UserId)
                    .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FileMetadata>(builder =>
+        {
+            builder.HasKey(f => f.Id);
+            builder.Property(f => f.Bucket).HasMaxLength(100).IsRequired();
+            builder.Property(f => f.ObjectName).HasMaxLength(500).IsRequired();
+            builder.Property(f => f.ContentType).HasMaxLength(100).IsRequired();
+            builder.Property(f => f.OriginalFileName).HasMaxLength(255).IsRequired();
+            builder.Property(f => f.CreatedAt).IsRequired();
+
+            builder.HasOne(f => f.Product)
+                .WithMany()
+                .HasForeignKey(f => f.ProductId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasOne(f => f.Shop)
+                .WithMany()
+                .HasForeignKey(f => f.ShopId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

@@ -1,22 +1,22 @@
-﻿using AutoMapper;
+using AutoMapper;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 using ShopAI.Application.Models;
 using ShopAI.Infrastructure.Repositories.Abstractions;
+using ShopAI.Infrastructure.Storage;
 
 namespace ShopAI.Application.Handlers
 {
-    /// <summary>
-    /// Запрос на получение детальной информации о товаре по его ID.
-    /// </summary>
     public record GetProductByIdQuery(Guid Id) : IRequest<ProductDetailsDto>;
 
     public class GetProductByIdHandler(
-    IProductRepository productRepository,
-    IMapper mapper) : IRequestHandler<GetProductByIdQuery, ProductDetailsDto>
+        IProductRepository productRepository,
+        IFileStorageService fileStorageService,
+        IConfiguration configuration,
+        IMapper mapper) : IRequestHandler<GetProductByIdQuery, ProductDetailsDto>
     {
         public async Task<ProductDetailsDto> Handle(GetProductByIdQuery request, CancellationToken ct)
         {
-            // Получаем продукт из репозитория. 
             var product = await productRepository.GetByIdWithDetailsAsync(request.Id);
 
             if (product == null)
@@ -24,7 +24,17 @@ namespace ShopAI.Application.Handlers
                 throw new KeyNotFoundException($"Товар с ID {request.Id} не найден.");
             }
 
-            return mapper.Map<ProductDetailsDto>(product);
+            var dto = mapper.Map<ProductDetailsDto>(product);
+            dto = dto with { ImageUrl = await ResolveUrlAsync(dto.ImageUrl) };
+            return dto;
+        }
+
+        private async Task<string> ResolveUrlAsync(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return value;
+            if (Uri.TryCreate(value, UriKind.Absolute, out _)) return value;
+            var bucket = configuration["Minio:Bucket"] ?? "shopai-images";
+            return await fileStorageService.GetPresignedUrlAsync(bucket, value);
         }
     }
 }

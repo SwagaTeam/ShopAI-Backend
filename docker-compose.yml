@@ -9,11 +9,17 @@ services:
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
+      - Minio__Endpoint=minio:9000
+      - Minio__AccessKey=${MINIO_ROOT_USER}
+      - Minio__SecretKey=${MINIO_ROOT_PASSWORD}
+      - Minio__Bucket=${MINIO_BUCKET:-shopai-images}
     ports:
       - "5000:8080"
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_started
     networks:
       - shopai-net
 
@@ -38,9 +44,25 @@ services:
     networks:
       - shopai-net
 
+  minio:
+    image: minio/minio:latest
+    container_name: shopai-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - shopai-net
+
 networks:
   shopai-net:
     driver: bridge
 
 volumes:
   pgdata:
+  minio-data:
