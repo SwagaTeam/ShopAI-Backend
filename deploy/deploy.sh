@@ -82,5 +82,5 @@ docker compose --env-file "$BACKEND_DIR/.env" -f "$COMPOSE_FILE" ps
 if command -v curl >/dev/null 2>&1; then
   http_port="$(grep -E '^HTTP_PORT=' "$BACKEND_DIR/.env" | tail -n 1 | cut -d '=' -f 2- || true)"
   http_port="${http_port:-80}"
-  curl -fsS --retry 12 --retry-delay 5 "http://127.0.0.1:${http_port}/healthz" >/dev/null
+  curl -fsS --retry 12 --retry-delay 5 --retry-all-errors "http://127.0.0.1:${http_port}/healthz" >/dev/null
 fi

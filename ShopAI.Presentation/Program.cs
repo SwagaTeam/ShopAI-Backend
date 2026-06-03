@@ -92,7 +92,10 @@ services.AddAuthorization();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+var swaggerEnabled = app.Environment.IsDevelopment()
+    || string.Equals(app.Configuration["Swagger:Enabled"], "true", StringComparison.OrdinalIgnoreCase);
+
+if (swaggerEnabled)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
