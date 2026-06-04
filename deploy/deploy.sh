@@ -80,7 +80,34 @@ docker compose --env-file "$BACKEND_DIR/.env" -f "$COMPOSE_FILE" up -d --build -
 docker compose --env-file "$BACKEND_DIR/.env" -f "$COMPOSE_FILE" ps
 
 if command -v curl >/dev/null 2>&1; then
-  http_port="$(grep -E '^HTTP_PORT=' "$BACKEND_DIR/.env" | tail -n 1 | cut -d '=' -f 2- || true)"
+  http_port="$(
+    { grep -E '^HTTP_PORT=' "$BACKEND_DIR/.env" || true; } \
+      | tail -n 1 \
+      | cut -d '=' -f 2- \
+      | tr -d '\r' \
+      | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+  )"
   http_port="${http_port:-80}"
-  curl -fsS --retry 12 --retry-delay 5 --retry-all-errors "http://127.0.0.1:${http_port}/healthz" >/dev/null
+  if ! printf '%s' "$http_port" | grep -Eq '^[0-9]+$'; then
+    echo "Invalid HTTP_PORT value in $BACKEND_DIR/.env: $http_port" >&2
+    exit 1
+  fi
+
+  healthcheck_url="http://127.0.0.1:${http_port}/healthz"
+  healthcheck_ok=false
+  for attempt in $(seq 1 24); do
+    if curl -fsS --max-time 5 "$healthcheck_url" >/dev/null; then
+      healthcheck_ok=true
+      break
+    fi
+
+    if [ "$attempt" -lt 24 ]; then
+      sleep 5
+    fi
+  done
+
+  if [ "$healthcheck_ok" != "true" ]; then
+    echo "Healthcheck failed after deploy: $healthcheck_url" >&2
+    exit 1
+  fi
 fi
