@@ -18,7 +18,11 @@ namespace ShopAI.Application.Handlers
             var skip = (request.Page - 1) * request.PageSize;
 
             var reviews = await reviewRepository.GetByProductIdAsync(request.ProductId, skip, request.PageSize, ct);
-
+            Console.WriteLine($"//////////////////////////USER EST/////////////////////////" +
+                              "\n---------------------------------------------------------" +
+                              $"{reviews[0].User}" +
+                              $"\n-----------------------------------" +
+                              $"\n//////////////////////////////////////////////////////");
             // В маппинге укажи: UserName = src.User.FullName
             return mapper.Map<List<ProductReviewDto>>(reviews);
         }

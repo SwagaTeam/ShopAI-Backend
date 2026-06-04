@@ -25,7 +25,7 @@ public class OpenRouterClient(HttpClient httpClient, IConfiguration configuratio
         var fallbackModels = fallbackModelsRaw
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        var maxTokens = TryParseInt(configuration["OpenRouter:MaxTokens"], 500);
+        var maxTokens = TryParseInt(configuration["OpenRouter:MaxTokens"], 100);
         var temperature = TryParseDouble(configuration["OpenRouter:Temperature"], 0.1);
         var topP = TryParseDouble(configuration["OpenRouter:TopP"], 1.0);
 
@@ -119,21 +119,29 @@ public class OpenRouterClient(HttpClient httpClient, IConfiguration configuratio
         {
             using var req = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        
+            req.Headers.Add("HTTP-Referer", "https://your-domain.com"); 
+            req.Headers.Add("X-Title", "ShopAI");
+
             req.Content = JsonContent.Create(payload);
 
             using var response = await httpClient.SendAsync(req, ct);
+        
             if (response.IsSuccessStatusCode)
             {
-                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
-                var content = ExtractContent(doc.RootElement);
-                if (string.IsNullOrWhiteSpace(content)) return null;
-                return ExtractJson(content);
+                var content = await response.Content.ReadAsStringAsync(ct);
+                using var doc = JsonDocument.Parse(content);
+                return ExtractContent(doc.RootElement);
             }
 
-            if ((int)response.StatusCode != 429 || attempt == maxAttempts) return null;
-
-            var delay = GetRetryDelay(response, attempt);
-            await Task.Delay(delay, ct);
+            if ((int)response.StatusCode == 429 && attempt < maxAttempts)
+            {
+                var delay = GetRetryDelay(response, attempt);
+                await Task.Delay(delay, ct);
+                continue; 
+            }
+        
+            break;
         }
 
         return null;
