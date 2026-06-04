@@ -33,21 +33,31 @@ public class OpenRouterClient(HttpClient httpClient, IConfiguration configuratio
         models.AddRange(fallbackModels.Where(m => !string.Equals(m, primaryModel, StringComparison.OrdinalIgnoreCase)));
 
         var systemPrompt = """
-                           Return only strict JSON object. No markdown.
+                           You are a precise e-commerce search assistant. Your task is to extract product search parameters from user input into a strict JSON object.
+
+                           Rules:
+                           1. If a brand is mentioned, put it in "brands".
+                           2. If a color is mentioned, put it in "colors".
+                           3. Extract any specific features or descriptions as "tags".
+                           4. If the user mentions a category, add it to "categoryHints" or "requiredCategories".
+                           5. If the user mentions a price range or budget, fill "budgetMin"/"budgetMax".
+                           6. If you are unsure about a field, leave it empty or null (do not hallucinate).
+                           7. Return ONLY JSON. No markdown, no explanations.
+
                            Schema:
                            {
-                             "intent":"search|bundle|gift|compare|unknown",
-                             "categoryHints":[],
-                             "requiredCategories":[],
-                             "keywords":[],
-                             "colors":[],
-                             "brands":[],
-                             "tags":[],
-                             "attributes":{},
-                             "budgetMin":null,
-                             "budgetMax":null,
-                             "priceSort":"asc|desc|none",
-                             "bundleSize":null
+                             "intent": "search|bundle|gift|compare|unknown",
+                             "categoryHints": ["list", "of", "strings"],
+                             "requiredCategories": ["list", "of", "strings"],
+                             "keywords": ["list", "of", "strings"],
+                             "colors": ["list", "of", "strings"],
+                             "brands": ["list", "of", "strings"],
+                             "tags": ["list", "of", "strings"],
+                             "attributes": {"key": "value"},
+                             "budgetMin": null,
+                             "budgetMax": null,
+                             "priceSort": "asc|desc|none",
+                             "bundleSize": null
                            }
                            """;
 
