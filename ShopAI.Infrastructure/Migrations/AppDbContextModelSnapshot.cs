@@ -271,7 +271,7 @@ namespace ShopAI.Infrastructure.Migrations
                     b.HasIndex("UserId", "ProductId")
                         .IsUnique();
 
-                    b.ToTable("ProductReview");
+                    b.ToTable("ProductReviews");
                 });
 
             modelBuilder.Entity("Domain.Entities.RecentlyViewedProduct", b =>
