@@ -51,49 +51,45 @@ public class OpenRouterClient(HttpClient httpClient, IConfiguration configuratio
                            }
                            """;
 
-        foreach (var model in models)
+        var payload = new
         {
-            var payload = new
+            primaryModel,
+            max_tokens = maxTokens,
+            temperature,
+            top_p = topP,
+            messages = new object[]
             {
-                model,
-                max_tokens = maxTokens,
-                temperature,
-                top_p = topP,
-                messages = new object[]
+                new
                 {
-                    new
+                    role = "system",
+                    content = new object[]
                     {
-                        role = "system",
-                        content = new object[]
-                        {
-                            new { type = "text", text = systemPrompt }
-                        }
-                    },
-                    new
-                    {
-                        role = "user",
-                        content = new object[]
-                        {
-                            new { type = "text", text = userPrompt }
-                        }
+                        new { type = "text", text = systemPrompt }
                     }
                 },
-                response_format = new { type = "json_object" }
-            };
-
-            var result = await SendWithRetryAsync(payload, apiKey, ct);
-            if (result == null) continue;
-
-            try
-            {
-                return JsonSerializer.Deserialize<InterpretedShoppingQuery>(result, new JsonSerializerOptions
+                new
                 {
-                    PropertyNameCaseInsensitive = true
-                });
-            }
-            catch
+                    role = "user",
+                    content = new object[]
+                    {
+                        new { type = "text", text = userPrompt }
+                    }
+                }
+            },
+            response_format = new { type = "json_object" }
+        };
+
+        var result = await SendWithRetryAsync(payload, apiKey, ct);
+
+        try
+        {
+            return JsonSerializer.Deserialize<InterpretedShoppingQuery>(result, new JsonSerializerOptions
             {
-            }
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch
+        {
         }
 
         return null;
