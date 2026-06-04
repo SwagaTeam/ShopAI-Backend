@@ -24,6 +24,7 @@ public class FilesController(
     };
 
     [HttpPost("products/{productId:guid}/image")]
+    [Consumes("multipart/form-data")]
     public async Task<ActionResult<object>> UploadProductImage(Guid productId, IFormFile file, CancellationToken ct)
     {
         var product = await productRepository.GetByIdAsync(productId);
@@ -36,6 +37,49 @@ public class FilesController(
 
         var url = await fileStorageService.GetPresignedUrlAsync(metadata.Bucket, metadata.ObjectName);
         return Ok(new { metadata.Id, Url = url });
+    }
+
+    [HttpPost("products/{productId:guid}/images")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<List<object>>> UploadProductImages(
+        Guid productId,
+        [FromForm] ProductImagesUploadRequest request,
+        CancellationToken ct)
+    {
+        var product = await productRepository.GetByIdAsync(productId);
+        if (product == null) return NotFound("Product not found");
+
+        var files = GetImageFiles(request);
+        if (files.Count == 0) return BadRequest("At least one image is required.");
+
+        try
+        {
+            foreach (var file in files)
+                ValidateFile(file);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        var result = new List<object>(files.Count);
+        FileMetadata? firstMetadata = null;
+        foreach (var file in files)
+        {
+            var metadata = await UploadInternalAsync(file, "products", productId, null, ct);
+            firstMetadata ??= metadata;
+            var url = await fileStorageService.GetPresignedUrlAsync(metadata.Bucket, metadata.ObjectName);
+            result.Add(new { metadata.Id, Url = url });
+        }
+
+        if (string.IsNullOrWhiteSpace(product.ImageUrl) && firstMetadata != null)
+        {
+            product.ImageUrl = firstMetadata.ObjectName;
+            productRepository.Update(product);
+            await productRepository.SaveAsync(ct);
+        }
+
+        return Ok(result);
     }
 
     [HttpPost("shops/{shopId:guid}/logo")]
@@ -117,4 +161,22 @@ public class FilesController(
         if (!AllowedContentTypes.Contains(file.ContentType)) throw new ArgumentException("Invalid content type");
         if (file.Length > 5 * 1024 * 1024) throw new ArgumentException("File too large. Max: 5MB");
     }
+
+    private static List<IFormFile> GetImageFiles(ProductImagesUploadRequest request)
+    {
+        var files = new List<IFormFile>();
+        if (request.Image != null) files.Add(request.Image);
+        if (request.File != null) files.Add(request.File);
+        if (request.Images != null) files.AddRange(request.Images.Where(f => f != null));
+        if (request.Files != null) files.AddRange(request.Files.Where(f => f != null));
+        return files.Where(f => f.Length > 0).ToList();
+    }
+}
+
+public class ProductImagesUploadRequest
+{
+    public IFormFile? Image { get; set; }
+    public IFormFile? File { get; set; }
+    public List<IFormFile>? Images { get; set; }
+    public List<IFormFile>? Files { get; set; }
 }

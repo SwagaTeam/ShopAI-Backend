@@ -1,7 +1,9 @@
-﻿using MediatR;
+using MediatR;
+using Microsoft.Extensions.Configuration;
 using ShopAI.Application.Helpers.Abstractions;
 using ShopAI.Application.Models;
 using ShopAI.Infrastructure.Repositories.Abstractions;
+using ShopAI.Infrastructure.Storage;
 
 namespace ShopAI.Application.Handlers;
 
@@ -12,34 +14,42 @@ public record GetCartQuery : IRequest<CartVm>;
 
 public class GetCartQueryHandler(
     ICartRepository cartRepository,
-    IUserContext userContext) : IRequestHandler<GetCartQuery, CartVm>
+    IUserContext userContext,
+    IFileStorageService fileStorageService,
+    IConfiguration configuration) : IRequestHandler<GetCartQuery, CartVm>
 {
     public async Task<CartVm> Handle(GetCartQuery request, CancellationToken ct)
     {
-        // Получаем ID пользователя из JWT через наш контекст
         var userId = userContext.UserId;
-
-        // Получаем корзину со всеми айтемами и данными продуктов (Eager Loading через Include)
         var cart = await cartRepository.GetByUserIdAsync(userId, ct);
 
-        // Если корзины нет в БД, возвращаем пустую модель (стандарт для UI)
         if (cart == null)
         {
             return new CartVm(Guid.Empty, new List<CartItemVm>(), 0);
         }
 
-        // Маппим сущности БД в твои CartItemVm
-        var itemVms = cart.Items.Select(item => new CartItemVm(
-            item.ProductId,
-            item.Product?.Name ?? "Товар не найден",
-            item.Quantity,
-            item.Product?.Price ?? 0,
-            item.Product?.ImageUrl ?? string.Empty
-        )).ToList();
+        var itemVms = new List<CartItemVm>(cart.Items.Count);
+        foreach (var item in cart.Items)
+        {
+            itemVms.Add(new CartItemVm(
+                item.ProductId,
+                item.Product?.Name ?? "Товар не найден",
+                item.Quantity,
+                item.Product?.Price ?? 0,
+                await ResolveUrlAsync(item.Product?.ImageUrl ?? string.Empty)
+            ));
+        }
 
-        // Считаем общую сумму всех товаров в корзине
         var totalPrice = itemVms.Sum(x => x.Price * x.Quantity);
-
         return new CartVm(cart.Id, itemVms, totalPrice);
+    }
+
+    private async Task<string> ResolveUrlAsync(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return value;
+        if (Uri.TryCreate(value, UriKind.Absolute, out _)) return value;
+
+        var bucket = configuration["Minio:Bucket"] ?? "shopai-images";
+        return await fileStorageService.GetPresignedUrlAsync(bucket, value);
     }
 }

@@ -33,4 +33,15 @@ public class AiController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new ShoppingAssistantQuery(request));
         return Ok(result);
     }
+
+    [HttpPost("product-tags")]
+    public async Task<ActionResult<GenerateProductTagsResponse>> GenerateProductTags(
+        [FromBody] GenerateProductTagsRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest("name is required");
+
+        var result = await mediator.Send(new GenerateProductTagsQuery(request));
+        return Ok(result);
+    }
 }

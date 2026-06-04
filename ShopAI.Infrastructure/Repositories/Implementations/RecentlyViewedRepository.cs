@@ -54,6 +54,9 @@ namespace ShopAI.Infrastructure.Repositories.Implementations
                 .OrderByDescending(r => r.ViewedAtUtc)
                 .Take(limit)
                 .Select(r => r.Product)
+                .Include(p => p.Shop)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
                 .ToListAsync(ct);
         }
     }

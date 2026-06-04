@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddAutoMapper(_ => {}, assembly);
 
         services.AddScoped<IUserContext, UserContext>();
+        services.AddScoped<IProductDtoFactory, ProductDtoFactory>();
         services.AddScoped<IPasswordHasher, Argon2PasswordHasher>();
         services.AddScoped<IJwtProvider, JwtProvider>();
         services.AddHttpClient<IOpenRouterClient, OpenRouterClient>((sp, client) =>

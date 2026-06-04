@@ -90,6 +90,7 @@ public class OpenRouterClient(HttpClient httpClient, IConfiguration configuratio
         };
 
         var result = await SendWithRetryAsync(payload, apiKey, ct);
+        if (result == null) return null;
 
         try
         {
@@ -103,6 +104,80 @@ public class OpenRouterClient(HttpClient httpClient, IConfiguration configuratio
         }
 
         return null;
+    }
+
+    public async Task<List<string>?> GenerateProductTagsAsync(
+        string name,
+        string? description,
+        Dictionary<string, string>? attributes,
+        int limit,
+        CancellationToken ct = default)
+    {
+        var apiKey = configuration["OpenRouter:ApiKey"];
+        var primaryModel = configuration["OpenRouter:Model"];
+        if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(primaryModel))
+            return null;
+
+        var maxTokens = TryParseInt(configuration["OpenRouter:MaxTokens"], 300);
+        var temperature = TryParseDouble(configuration["OpenRouter:Temperature"], 0.1);
+        var topP = TryParseDouble(configuration["OpenRouter:TopP"], 1.0);
+
+        var systemPrompt = """
+                           Return only strict JSON object. No markdown.
+                           Schema: {"tags":["tag1","tag2"]}
+                           Rules:
+                           - generate short searchable marketplace tags
+                           - use lowercase
+                           - include Russian and English synonyms when useful
+                           - do not invent unavailable facts
+                           - no more than requested limit
+                           """;
+
+        var productText = JsonSerializer.Serialize(new
+        {
+            name,
+            description,
+            attributes,
+            limit
+        });
+
+        var payload = new
+        {
+            model = primaryModel,
+            max_tokens = maxTokens,
+            temperature,
+            top_p = topP,
+            messages = new object[]
+            {
+                new { role = "system", content = new object[] { new { type = "text", text = systemPrompt } } },
+                new { role = "user", content = new object[] { new { type = "text", text = productText } } }
+            },
+            response_format = new { type = "json_object" }
+        };
+
+        var result = await SendWithRetryAsync(payload, apiKey, ct);
+        if (result == null) return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(result);
+            if (!doc.RootElement.TryGetProperty("tags", out var tagsElement) ||
+                tagsElement.ValueKind != JsonValueKind.Array)
+                return null;
+
+            return tagsElement.EnumerateArray()
+                .Where(e => e.ValueKind == JsonValueKind.String)
+                .Select(e => e.GetString())
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t!.Trim().ToLowerInvariant())
+                .Distinct()
+                .Take(limit)
+                .ToList();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static int TryParseInt(string? value, int defaultValue)

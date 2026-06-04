@@ -27,3 +27,11 @@ public record ShoppingAssistantResponse(
     InterpretedShoppingQuery Interpreted,
     List<ProductShortDto> Items,
     List<List<ProductShortDto>> Bundles);
+
+public record GenerateProductTagsRequest(
+    string Name,
+    string? Description,
+    Dictionary<string, string>? Attributes,
+    int? Limit);
+
+public record GenerateProductTagsResponse(List<string> Tags);

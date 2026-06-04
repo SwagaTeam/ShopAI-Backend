@@ -18,6 +18,9 @@ public class FavoriteRepository(AppDbContext context) : Repository<FavoriteProdu
             .Where(f => f.UserId == userId)
             .OrderByDescending(f => f.AddedAtUtc)
             .Select(f => f.Product)
+            .Include(p => p.Shop)
+            .Include(p => p.Brand)
+            .Include(p => p.Category)
             .ToListAsync(ct);
     }
 }

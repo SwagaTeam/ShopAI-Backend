@@ -1,10 +1,8 @@
-using AutoMapper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using ShopAI.Application.Helpers.Abstractions;
 using ShopAI.Application.Models;
 using ShopAI.Infrastructure;
-using ShopAI.Infrastructure.Storage;
 
 namespace ShopAI.Application.Handlers;
 
@@ -13,47 +11,36 @@ public record GetShopProductsQuery(Guid ShopId, int Page = 1, int PageSize = 10)
 
 public class GetShopProductsQueryHandler(
     AppDbContext context,
-    IFileStorageService fileStorageService,
-    IConfiguration configuration,
-    IMapper mapper)
+    IProductDtoFactory productDtoFactory)
     : IRequestHandler<GetShopProductsQuery, PagedListDto<ProductShortDto>>
 {
     public async Task<PagedListDto<ProductShortDto>> Handle(GetShopProductsQuery request, CancellationToken ct)
     {
         var shopExists = await context.Shops.AnyAsync(s => s.Id == request.ShopId, ct);
         if (!shopExists)
-            throw new KeyNotFoundException("Магазин не найден.");
+            throw new KeyNotFoundException("Shop was not found.");
+
+        var page = Math.Max(request.Page, 1);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
         var query = context.Products
             .AsNoTracking()
             .Include(p => p.Shop)
             .Include(p => p.Brand)
+            .Include(p => p.Category)
             .Where(p => p.ShopId == request.ShopId);
 
         var totalCount = await query.CountAsync(ct);
 
         var products = await query
             .OrderByDescending(p => p.Id)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
-        var dtos = mapper.Map<List<ProductShortDto>>(products);
-        var withUrls = new List<ProductShortDto>(dtos.Count);
-        foreach (var dto in dtos)
-        {
-            withUrls.Add(dto with { ImageUrl = await ResolveUrlAsync(dto.ImageUrl) });
-        }
+        var items = await productDtoFactory.CreateShortDtosAsync(products, ct);
 
-        var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
-        return new PagedListDto<ProductShortDto>(withUrls, request.Page, request.PageSize, totalCount, totalPages);
-    }
-
-    private async Task<string> ResolveUrlAsync(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return value;
-        if (Uri.TryCreate(value, UriKind.Absolute, out _)) return value;
-        var bucket = configuration["Minio:Bucket"] ?? "shopai-images";
-        return await fileStorageService.GetPresignedUrlAsync(bucket, value);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PagedListDto<ProductShortDto>(items, page, pageSize, totalCount, totalPages);
     }
 }

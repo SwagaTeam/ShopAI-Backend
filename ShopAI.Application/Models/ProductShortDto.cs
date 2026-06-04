@@ -7,7 +7,14 @@ public record ProductShortDto(
     string ImageUrl,
     string ShopName,    
     string? BrandName,  
-    int StockQuantity
+    int StockQuantity,
+    decimal Rating = 0,
+    int ReviewsCount = 0,
+    bool IsInWishlist = false,
+    int CartQuantity = 0,
+    List<string>? Tags = null,
+    Dictionary<string, string>? Attributes = null,
+    List<string>? ImageUrls = null
 );
 
 public record ProductDetailsDto(
@@ -21,5 +28,12 @@ public record ProductDetailsDto(
     string CategoryName,
     Guid ShopId,
     string ShopName,
-    string? BrandName
+    string? BrandName,
+    decimal Rating = 0,
+    int ReviewsCount = 0,
+    bool IsInWishlist = false,
+    int CartQuantity = 0,
+    List<string>? Tags = null,
+    Dictionary<string, string>? Attributes = null,
+    List<string>? ImageUrls = null
 );
