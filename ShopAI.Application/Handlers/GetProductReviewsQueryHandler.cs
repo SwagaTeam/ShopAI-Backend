@@ -15,7 +15,7 @@ namespace ShopAI.Application.Handlers
             if (request.Page < 1)
                 throw new ArgumentException("Номер страницы должен быть больше нуля.");
 
-            int skip = (request.Page - 1) * request.PageSize;
+            var skip = (request.Page - 1) * request.PageSize;
 
             var reviews = await reviewRepository.GetByProductIdAsync(request.ProductId, skip, request.PageSize, ct);
 
