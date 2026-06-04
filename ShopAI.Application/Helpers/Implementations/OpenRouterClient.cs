@@ -41,8 +41,11 @@ public class OpenRouterClient(HttpClient httpClient, IConfiguration configuratio
                            3. Extract any specific features or descriptions as "tags".
                            4. If the user mentions a category, add it to "categoryHints" or "requiredCategories".
                            5. If the user mentions a price range or budget, fill "budgetMin"/"budgetMax".
-                           6. If you are unsure about a field, leave it empty or null (do not hallucinate).
-                           7. Return ONLY JSON. No markdown, no explanations.
+                           6. If the user asks for variants/options/sets for a room or complete interior, set "intent" to "bundle".
+                           7. For kitchen bundle requests, include requiredCategories: ["cabinet","chair","table","tile","fridge"].
+                           8. For grey/gray kitchen requests, put "gray" and "серый" into "colors".
+                           9. If you are unsure about a field, leave it empty or null (do not hallucinate).
+                           10. Return ONLY JSON. No markdown, no explanations.
 
                            Schema:
                            {
