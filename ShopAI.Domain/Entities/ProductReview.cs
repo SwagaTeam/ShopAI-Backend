@@ -8,7 +8,7 @@ namespace Domain.Entities
         public Guid ProductId { get; set; }
         public int Rating { get; set; }
         public string Comment { get; set; } = string.Empty;
-        public List<string> ImagePaths { get; set; } = new List<string>();
+        public List<string> ImagePaths { get; set; } = new();
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
         public virtual User User { get; set; } = null!;

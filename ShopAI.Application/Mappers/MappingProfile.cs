@@ -21,8 +21,14 @@ public class MappingProfile : Profile
 
         // Маппинг для отзывов
         CreateMap<ProductReview, ProductReviewDto>()
-            .ForMember(d => d.UserName, opt => opt.MapFrom(s => s.User != null ? s.User.FullName : "Аноним"));
-
+            .ForMember(d => d.UserName, opt => opt.MapFrom(s => s.User.FullName))
+            .ForMember(d => d.Id, opt => opt.MapFrom(s => s.Id))
+            .ForMember(d => d.UserId, opt => opt.MapFrom(s => s.UserId))
+            .ForMember(d => d.Rating, opt => opt.MapFrom(s => s.Rating))
+            .ForMember(d => d.Comment, opt => opt.MapFrom(s => s.Comment))
+            .ForMember(d => d.ImagePaths, opt => opt.MapFrom(s => s.ImagePaths))
+            .ForMember(d => d.CreatedAtUtc, opt => opt.MapFrom(s => s.CreatedAtUtc));
+        
         // Маппинг для полной модели магазина
         CreateMap<Shop, ShopDto>()
             .ForMember(d => d.OwnerName, opt => opt.MapFrom(s => s.Owner != null ? s.Owner.FullName : "Неизвестный владелец"));
