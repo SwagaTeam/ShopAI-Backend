@@ -9,13 +9,13 @@ public class ProductReviewRepository(AppDbContext context)
 {
     public async Task<bool> HasUserReviewedProductAsync(Guid userId, Guid productId, CancellationToken ct)
     {
-        return await context.Set<ProductReview>()
+        return await context.ProductReviews
             .AnyAsync(r => r.UserId == userId && r.ProductId == productId, ct);
     }
 
     public async Task<List<ProductReview>> GetByProductIdAsync(Guid productId, int skip, int take, CancellationToken ct)
     {
-        return await context.Set<ProductReview>()
+        return await context.ProductReviews
             .Include(r => r.User)
             .Where(r => r.ProductId == productId)
             .OrderByDescending(r => r.CreatedAtUtc)
