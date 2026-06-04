@@ -275,11 +275,11 @@ public class ShoppingAssistantQueryHandler(
         var score = 0;
         foreach (var term in slot.Terms.SelectMany(ExpandTerm).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            if (Contains(product.Name, term)) score += 9;
-            if (Contains(product.Category?.Name, term)) score += 7;
-            if (Contains(product.Tags, term)) score += 6;
-            if (Contains(product.Description, term)) score += 3;
-            if (Contains(product.AttributesJson, term)) score += 2;
+            if (ContainsSlotTerm(product.Name, term)) score += 9;
+            if (ContainsSlotTerm(product.Category?.Name, term)) score += 7;
+            if (ContainsSlotTerm(product.Tags, term)) score += 6;
+            if (ContainsSlotTerm(product.Description, term)) score += 3;
+            if (ContainsSlotTerm(product.AttributesJson, term)) score += 2;
         }
 
         return score;
@@ -481,6 +481,18 @@ public class ShoppingAssistantQueryHandler(
     private static bool Contains(string? source, string value)
         => !string.IsNullOrWhiteSpace(source)
            && source.Contains(value, StringComparison.OrdinalIgnoreCase);
+
+    private static bool ContainsSlotTerm(string? source, string term)
+    {
+        if (string.IsNullOrWhiteSpace(source)) return false;
+
+        if (term.Contains(' ', StringComparison.Ordinal) || term.Contains('-', StringComparison.Ordinal))
+            return source.Contains(term, StringComparison.OrdinalIgnoreCase);
+
+        return Tokenize(source).Any(token =>
+            token.Equals(term, StringComparison.OrdinalIgnoreCase)
+            || token.StartsWith(term, StringComparison.OrdinalIgnoreCase));
+    }
 
     private static InterpretedShoppingQuery BuildFallback(ShoppingAssistantRequest request)
     {
