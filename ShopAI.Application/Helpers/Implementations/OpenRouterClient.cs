@@ -53,7 +53,7 @@ public class OpenRouterClient(HttpClient httpClient, IConfiguration configuratio
 
         var payload = new
         {
-            primaryModel,
+            model = primaryModel, 
             max_tokens = maxTokens,
             temperature,
             top_p = topP,
