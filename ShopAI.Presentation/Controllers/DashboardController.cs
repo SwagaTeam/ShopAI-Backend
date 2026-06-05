@@ -10,7 +10,7 @@ namespace ShopAI.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "User,Admin")]
+[Authorize(Roles = "User,Seller,Admin")]
 public class DashboardController(
     AppDbContext context,
     IUserContext userContext,
@@ -63,7 +63,7 @@ public class DashboardController(
     }
 
     [HttpGet("seller")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Seller,Admin")]
     public async Task<ActionResult<SellerDashboardVm>> GetSellerDashboard(CancellationToken ct)
     {
         var userId = userContext.UserId;

@@ -9,7 +9,7 @@ namespace ShopAI.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "User,Admin")]
+[Authorize(Roles = "User,Seller,Admin")]
 public class UsersController(IMediator mediator, IUserContext userContext) : ControllerBase
 {
     /// <summary>

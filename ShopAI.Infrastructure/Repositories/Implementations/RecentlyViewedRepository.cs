@@ -53,10 +53,13 @@ namespace ShopAI.Infrastructure.Repositories.Implementations
                 .Where(r => r.UserId == userId)
                 .OrderByDescending(r => r.ViewedAtUtc)
                 .Take(limit)
+                .Include(r => r.Product)
+                    .ThenInclude(p => p.Shop)
+                .Include(r => r.Product)
+                    .ThenInclude(p => p.Brand)
+                .Include(r => r.Product)
+                    .ThenInclude(p => p.Category)
                 .Select(r => r.Product)
-                .Include(p => p.Shop)
-                .Include(p => p.Brand)
-                .Include(p => p.Category)
                 .ToListAsync(ct);
         }
     }

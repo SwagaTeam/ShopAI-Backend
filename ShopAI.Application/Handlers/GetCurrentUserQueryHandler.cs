@@ -14,7 +14,7 @@ namespace ShopAI.Application.Handlers
             var user = await userRepository.GetByIdAsync(request.UserId)
                        ?? throw new KeyNotFoundException("Пользователь не найден.");
 
-            return new CustomerInfo(user.Id, user.FullName, user.Email, user.Phone);
+            return new CustomerInfo(user.Id, user.FullName, user.Email, user.Phone, user.Role);
         }
     }
 }

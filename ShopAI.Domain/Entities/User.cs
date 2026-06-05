@@ -6,6 +6,7 @@ namespace Domain.Entities
     {
         public const string AdminRole = "Admin";
         public const string UserRole = "User";
+        public const string SellerRole = "Seller";
 
         public required string FullName { get; set; } = "unknown";
         public required string Email { get; set; } = "unknown";

@@ -10,7 +10,7 @@ namespace ShopAI.Presentation.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "User,Admin")]
+    [Authorize(Roles = "User,Seller,Admin")]
     [Produces(MediaTypeNames.Application.Json)]
     public class FavoritesController(IMediator mediator) : ControllerBase
     {

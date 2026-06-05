@@ -39,12 +39,22 @@ public class AddToCartCommandHandler(
 
         if (existingItem != null)
         {
-            // Если есть — увеличиваем количество
-            existingItem.Quantity += request.Quantity;
-            cartRepository.UpdateItem(existingItem);
+            var newQuantity = existingItem.Quantity + request.Quantity;
+            if (newQuantity <= 0)
+            {
+                cartRepository.RemoveItem(existingItem);
+            }
+            else
+            {
+                existingItem.Quantity = newQuantity;
+                cartRepository.UpdateItem(existingItem);
+            }
         }
         else
         {
+            if (request.Quantity <= 0)
+                return cart.Id;
+
             // Если нет — создаем новую запись
             var newItem = new CartItem
             {

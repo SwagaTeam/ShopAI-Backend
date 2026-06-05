@@ -28,8 +28,19 @@ public class GetCartQueryHandler(
             return new CartVm(Guid.Empty, new List<CartItemVm>(), 0);
         }
 
-        var itemVms = new List<CartItemVm>(cart.Items.Count);
-        foreach (var item in cart.Items)
+        var invalidItems = cart.Items.Where(item => item.Quantity <= 0).ToList();
+        if (invalidItems.Count > 0)
+        {
+            foreach (var item in invalidItems)
+                cartRepository.RemoveItem(item);
+
+            cart.UpdatedAtUtc = DateTime.UtcNow;
+            await cartRepository.SaveAsync(ct);
+        }
+
+        var validItems = cart.Items.Where(item => item.Quantity > 0).ToList();
+        var itemVms = new List<CartItemVm>(validItems.Count);
+        foreach (var item in validItems)
         {
             itemVms.Add(new CartItemVm(
                 item.ProductId,

@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<User> Users => Set<User>();
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
+    public DbSet<SellerAccessRequest> SellerAccessRequests => Set<SellerAccessRequest>();
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<FileMetadata> FileMetadatas => Set<FileMetadata>();
 
@@ -110,6 +111,11 @@ public class AppDbContext : DbContext
             builder.HasOne(o => o.Shop)
                    .WithMany()
                    .HasForeignKey(o => o.ShopId);
+
+            builder.Property(o => o.PaymentProvider).HasMaxLength(50);
+            builder.Property(o => o.PaymentProviderId).HasMaxLength(120);
+            builder.Property(o => o.PaymentStatus).HasMaxLength(50);
+            builder.Property(o => o.PaymentConfirmationUrl).HasMaxLength(1000);
         });
 
         // --- ORDER ITEM ---
@@ -215,6 +221,28 @@ public class AppDbContext : DbContext
             builder.HasOne(f => f.Shop)
                 .WithMany()
                 .HasForeignKey(f => f.ShopId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SellerAccessRequest>(builder =>
+        {
+            builder.HasKey(r => r.Id);
+            builder.Property(r => r.InnOrOgrnip).HasMaxLength(12).IsRequired();
+            builder.Property(r => r.SocialOrWebsiteUrl).HasMaxLength(500).IsRequired();
+            builder.Property(r => r.Description).HasMaxLength(300).IsRequired();
+            builder.Property(r => r.AdminComment).HasMaxLength(500);
+            builder.Property(r => r.PlannedCategory).HasConversion<string>().HasMaxLength(30).IsRequired();
+            builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
+            builder.HasIndex(r => new { r.UserId, r.Status });
+
+            builder.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(r => r.ReviewedByAdmin)
+                .WithMany()
+                .HasForeignKey(r => r.ReviewedByAdminId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
     }

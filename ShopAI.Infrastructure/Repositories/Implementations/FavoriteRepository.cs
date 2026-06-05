@@ -17,10 +17,13 @@ public class FavoriteRepository(AppDbContext context) : Repository<FavoriteProdu
         return await context.Set<FavoriteProduct>()
             .Where(f => f.UserId == userId)
             .OrderByDescending(f => f.AddedAtUtc)
+            .Include(f => f.Product)
+                .ThenInclude(p => p.Shop)
+            .Include(f => f.Product)
+                .ThenInclude(p => p.Brand)
+            .Include(f => f.Product)
+                .ThenInclude(p => p.Category)
             .Select(f => f.Product)
-            .Include(p => p.Shop)
-            .Include(p => p.Brand)
-            .Include(p => p.Category)
             .ToListAsync(ct);
     }
 }

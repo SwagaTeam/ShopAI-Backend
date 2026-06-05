@@ -19,6 +19,11 @@ public class Order : Entity
     public Guid UserId { get; set; }
     public DateTime CreatedAt { get; private set; }
     public OrderStatus Status { get; set; }
+    public string? PaymentProvider { get; set; }
+    public string? PaymentProviderId { get; set; }
+    public string? PaymentStatus { get; set; }
+    public string? PaymentConfirmationUrl { get; set; }
+    public DateTime? PaidAtUtc { get; set; }
     public virtual User User { get; set; }
 
     public virtual Shop Shop { get; private set; }
