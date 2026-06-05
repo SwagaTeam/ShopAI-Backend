@@ -19,5 +19,6 @@ namespace Domain.Entities
         public virtual ICollection<FavoriteProduct> Favorites { get; set; } = new List<FavoriteProduct>();
         public virtual ICollection<RecentlyViewedProduct> RecentlyViewed { get; set; } = new List<RecentlyViewedProduct>();
         public virtual ICollection<ProductReview> Reviews { get; set; } = new List<ProductReview>();
+        public virtual ICollection<DeliveryAddress> DeliveryAddresses { get; set; } = new List<DeliveryAddress>();
     }
 }

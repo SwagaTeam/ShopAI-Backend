@@ -29,6 +29,19 @@ public class PaymentsController(
         var userId = userContext.UserId;
         var user = await context.Users.SingleOrDefaultAsync(u => u.Id == userId, ct);
         if (user == null) return Unauthorized();
+        if (request == null) return BadRequest("Checkout data is required.");
+
+        var delivery = await ResolveDeliveryAsync(userId, request, ct);
+        if (!delivery.IsValid)
+            return BadRequest(delivery.Error);
+
+        var contactPhone = request.ContactPhone?.Trim() ?? string.Empty;
+        if (contactPhone.Length is < 5 or > 30)
+            return BadRequest("Contact phone must contain 5-30 characters.");
+
+        var comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
+        if (comment?.Length > 500)
+            return BadRequest("Comment must be 500 characters or less.");
 
         var cart = await context.Set<Cart>()
             .Include(c => c.Items)
@@ -51,6 +64,10 @@ public class PaymentsController(
             var order = new Order(group.Key, user)
             {
                 UserId = userId,
+                DeliveryAddressId = delivery.AddressId,
+                DeliveryAddress = delivery.AddressText!,
+                ContactPhone = contactPhone,
+                Comment = comment,
                 PaymentProvider = "YooKassa",
                 PaymentStatus = "created"
             };
@@ -159,6 +176,27 @@ public class PaymentsController(
         return Ok();
     }
 
+    private async Task<ResolvedDelivery> ResolveDeliveryAsync(Guid userId, CheckoutRequest request, CancellationToken ct)
+    {
+        if (request.DeliveryAddressId.HasValue)
+        {
+            var address = await context.DeliveryAddresses
+                .AsNoTracking()
+                .SingleOrDefaultAsync(a => a.Id == request.DeliveryAddressId.Value && a.UserId == userId, ct);
+
+            if (address == null)
+                return ResolvedDelivery.Invalid("Delivery address was not found.");
+
+            return ResolvedDelivery.Valid(address.Id, address.AddressLine);
+        }
+
+        var addressText = request.DeliveryAddressText?.Trim() ?? string.Empty;
+        if (addressText.Length is < 10 or > 500)
+            return ResolvedDelivery.Invalid("Delivery address must contain 10-500 characters.");
+
+        return ResolvedDelivery.Valid(null, addressText);
+    }
+
     private async Task<CreatedPayment> CreatePaymentAsync(
         IReadOnlyCollection<Order> orders,
         decimal amount,
@@ -225,7 +263,12 @@ public class PaymentsController(
     }
 }
 
-public record CheckoutRequest(string? ReturnUrl);
+public record CheckoutRequest(
+    string? ReturnUrl,
+    Guid? DeliveryAddressId,
+    string? DeliveryAddressText,
+    string? ContactPhone,
+    string? Comment);
 
 public record CheckoutResponse(
     Guid PaymentId,
@@ -240,6 +283,12 @@ public record ConfirmPaymentRequest(List<Guid> OrderIds);
 public record PaymentStatusResponse(Guid PaymentId, List<Guid> OrderIds, string Status);
 
 internal record CreatedPayment(Guid PaymentId, string ProviderPaymentId, string Status, string ConfirmationUrl);
+
+internal record ResolvedDelivery(bool IsValid, Guid? AddressId, string? AddressText, string? Error)
+{
+    public static ResolvedDelivery Valid(Guid? addressId, string addressText) => new(true, addressId, addressText, null);
+    public static ResolvedDelivery Invalid(string error) => new(false, null, null, error);
+}
 
 internal static class JsonElementExtensions
 {

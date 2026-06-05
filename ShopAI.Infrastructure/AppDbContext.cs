@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
     public DbSet<SellerAccessRequest> SellerAccessRequests => Set<SellerAccessRequest>();
+    public DbSet<DeliveryAddress> DeliveryAddresses => Set<DeliveryAddress>();
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<FileMetadata> FileMetadatas => Set<FileMetadata>();
 
@@ -46,6 +47,11 @@ public class AppDbContext : DbContext
                    .WithOne(s => s.Owner)
                    .HasForeignKey(s => s.OwnerId)
                    .OnDelete(DeleteBehavior.Restrict); // Чтобы при удалении юзера случайно не стерлись все магазины (безопаснее)
+
+            builder.HasMany(u => u.DeliveryAddresses)
+                   .WithOne(a => a.User)
+                   .HasForeignKey(a => a.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
         });
 
         // --- SHOP ---
@@ -116,6 +122,14 @@ public class AppDbContext : DbContext
             builder.Property(o => o.PaymentProviderId).HasMaxLength(120);
             builder.Property(o => o.PaymentStatus).HasMaxLength(50);
             builder.Property(o => o.PaymentConfirmationUrl).HasMaxLength(1000);
+            builder.Property(o => o.DeliveryAddress).HasMaxLength(500).IsRequired();
+            builder.Property(o => o.ContactPhone).HasMaxLength(30).IsRequired();
+            builder.Property(o => o.Comment).HasMaxLength(500);
+
+            builder.HasOne(o => o.DeliveryAddressRef)
+                   .WithMany()
+                   .HasForeignKey(o => o.DeliveryAddressId)
+                   .OnDelete(DeleteBehavior.SetNull);
         });
 
         // --- ORDER ITEM ---
@@ -244,6 +258,18 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(r => r.ReviewedByAdminId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DeliveryAddress>(builder =>
+        {
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.Title).HasMaxLength(100).IsRequired();
+            builder.Property(a => a.AddressLine).HasMaxLength(500).IsRequired();
+            builder.Property(a => a.Entrance).HasMaxLength(30);
+            builder.Property(a => a.Floor).HasMaxLength(30);
+            builder.Property(a => a.Apartment).HasMaxLength(30);
+            builder.Property(a => a.Comment).HasMaxLength(300);
+            builder.HasIndex(a => new { a.UserId, a.CreatedAtUtc });
         });
     }
 }
