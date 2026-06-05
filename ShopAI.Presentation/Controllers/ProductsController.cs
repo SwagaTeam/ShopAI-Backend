@@ -4,8 +4,10 @@ using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ShopAI.Application.Handlers;
 using ShopAI.Application.Models;
+using ShopAI.Infrastructure;
 using ShopAI.Infrastructure.Repositories.Abstractions;
 using ShopAI.Infrastructure.Storage;
 
@@ -19,6 +21,7 @@ public class ProductsController(
     IProductRepository productRepository,
     IFileMetadataRepository fileMetadataRepository,
     IFileStorageService fileStorageService,
+    AppDbContext context,
     IConfiguration configuration) : ControllerBase
 {
     private static readonly HashSet<string> AllowedImageContentTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -128,6 +131,86 @@ public class ProductsController(
         return CreatedAtAction(nameof(GetById), new { id = productId }, productId);
     }
 
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProductRequest request, CancellationToken ct)
+    {
+        var product = await context.Products.SingleOrDefaultAsync(p => p.Id == id, ct);
+        if (product == null) return NotFound("Product not found.");
+
+        try
+        {
+            await ApplyProductUpdateAsync(product, request, ct);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        await context.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/with-images")]
+    [Authorize(Roles = "Admin")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateWithImages(
+        Guid id,
+        [FromForm] UpdateProductWithImagesRequest request,
+        CancellationToken ct)
+    {
+        var product = await context.Products.SingleOrDefaultAsync(p => p.Id == id, ct);
+        if (product == null) return NotFound("Product not found.");
+
+        var files = GetImageFiles(request);
+
+        try
+        {
+            foreach (var file in files)
+                ValidateImage(file);
+
+            await ApplyProductUpdateAsync(product, request, ct);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        if (request.ReplaceImages || request.ClearImages)
+        {
+            await DeleteProductImagesAsync(product.Id, ct);
+            product.ImageUrl = string.Empty;
+        }
+
+        if (files.Count > 0)
+        {
+            var uploaded = new List<FileMetadata>(files.Count);
+            foreach (var file in files)
+            {
+                uploaded.Add(await UploadProductImageAsync(file, product.Id, ct));
+            }
+
+            product.ImageUrl = uploaded[0].ObjectName;
+        }
+
+        await context.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
 
     [HttpPut("{id:guid}/tags")]
     [Authorize(Roles = "Admin")]
@@ -214,6 +297,67 @@ public class ProductsController(
         }
     }
 
+    private async Task ApplyProductUpdateAsync(Product product, IUpdateProductRequest request, CancellationToken ct)
+    {
+        if (request.ShopId.HasValue && !await context.Shops.AnyAsync(s => s.Id == request.ShopId.Value, ct))
+            throw new ArgumentException("Shop was not found.");
+
+        if (request.CategoryId.HasValue && !await context.Categories.AnyAsync(c => c.Id == request.CategoryId.Value, ct))
+            throw new ArgumentException("Category was not found.");
+
+        if (request.BrandId.HasValue && !await context.Brands.AnyAsync(b => b.Id == request.BrandId.Value, ct))
+            throw new ArgumentException("Brand was not found.");
+
+        var nextShopId = request.ShopId ?? product.ShopId;
+        var nextCategoryId = request.CategoryId ?? product.CategoryId;
+
+        var categoryBelongsToShop = await context.Categories
+            .AnyAsync(c => c.Id == nextCategoryId && c.ShopId == nextShopId, ct);
+        if (!categoryBelongsToShop)
+            throw new InvalidOperationException("Category does not belong to the selected shop.");
+
+        if (request.Price.HasValue && request.Price.Value <= 0)
+            throw new ArgumentException("Product price must be greater than zero.");
+
+        if (request.StockQuantity.HasValue && request.StockQuantity.Value < 0)
+            throw new ArgumentException("Stock quantity cannot be negative.");
+
+        var nextName = request.Name?.Trim();
+        if (!string.IsNullOrWhiteSpace(nextName))
+        {
+            var duplicate = await context.Products.AnyAsync(p =>
+                p.Id != product.Id &&
+                p.ShopId == nextShopId &&
+                p.Name.ToLower() == nextName.ToLower(), ct);
+            if (duplicate)
+                throw new InvalidOperationException("Product with this name already exists in the selected shop.");
+
+            product.Name = nextName;
+        }
+
+        if (request.ShopId.HasValue) product.ShopId = request.ShopId.Value;
+        if (request.CategoryId.HasValue) product.CategoryId = request.CategoryId.Value;
+        if (request.BrandIdSet) product.BrandId = request.BrandId;
+        if (request.Price.HasValue) product.Price = request.Price.Value;
+        if (request.StockQuantity.HasValue) product.StockQuantity = request.StockQuantity.Value;
+        if (request.Description != null) product.Description = request.Description.Trim();
+        if (request.ImageUrl != null) product.ImageUrl = request.ImageUrl.Trim();
+
+        if (request.Tags != null || request.TagsCsv != null)
+        {
+            product.Tags = string.Join(",", ParseTags(request.Tags, request.TagsCsv) ?? []);
+        }
+
+        if (request.Attributes != null)
+        {
+            product.AttributesJson = JsonSerializer.Serialize(request.Attributes);
+        }
+        else if (request.AttributesJson != null)
+        {
+            product.AttributesJson = JsonSerializer.Serialize(ParseAttributes(request.AttributesJson) ?? new Dictionary<string, string>());
+        }
+    }
+
     private async Task<FileMetadata> UploadProductImageAsync(IFormFile file, Guid productId, CancellationToken ct)
     {
         ValidateImage(file);
@@ -243,6 +387,20 @@ public class ProductsController(
         return metadata;
     }
 
+    private async Task DeleteProductImagesAsync(Guid productId, CancellationToken ct)
+    {
+        var images = await context.FileMetadatas
+            .Where(f => f.ProductId == productId)
+            .ToListAsync(ct);
+
+        foreach (var image in images)
+        {
+            await fileStorageService.DeleteAsync(image.Bucket, image.ObjectName, ct);
+        }
+
+        context.FileMetadatas.RemoveRange(images);
+    }
+
     private static void ValidateImage(IFormFile file)
     {
         if (file.Length == 0) throw new ArgumentException("File is empty.");
@@ -251,6 +409,16 @@ public class ProductsController(
     }
 
     private static List<IFormFile> GetImageFiles(CreateProductWithImageRequest request)
+    {
+        var files = new List<IFormFile>();
+        if (request.Image != null) files.Add(request.Image);
+        if (request.File != null) files.Add(request.File);
+        if (request.Images != null) files.AddRange(request.Images.Where(f => f != null));
+        if (request.Files != null) files.AddRange(request.Files.Where(f => f != null));
+        return files.Where(f => f.Length > 0).ToList();
+    }
+
+    private static List<IFormFile> GetImageFiles(UpdateProductWithImagesRequest request)
     {
         var files = new List<IFormFile>();
         if (request.Image != null) files.Add(request.Image);
@@ -303,6 +471,65 @@ public class CreateProductWithImageRequest
     public List<string>? Tags { get; set; }
     public string? TagsCsv { get; set; }
     public string? AttributesJson { get; set; }
+    public IFormFile? Image { get; set; }
+    public IFormFile? File { get; set; }
+    public List<IFormFile>? Images { get; set; }
+    public List<IFormFile>? Files { get; set; }
+}
+
+public interface IUpdateProductRequest
+{
+    Guid? ShopId { get; }
+    string? Name { get; }
+    decimal? Price { get; }
+    Guid? CategoryId { get; }
+    string? Description { get; }
+    string? ImageUrl { get; }
+    int? StockQuantity { get; }
+    Guid? BrandId { get; }
+    bool BrandIdSet { get; }
+    List<string>? Tags { get; }
+    string? TagsCsv { get; }
+    string? AttributesJson { get; }
+    Dictionary<string, string>? Attributes { get; }
+}
+
+public class UpdateProductRequest : IUpdateProductRequest
+{
+    public Guid? ShopId { get; set; }
+    public string? Name { get; set; }
+    public decimal? Price { get; set; }
+    public Guid? CategoryId { get; set; }
+    public string? Description { get; set; }
+    public string? ImageUrl { get; set; }
+    public int? StockQuantity { get; set; }
+    public Guid? BrandId { get; set; }
+    public bool ClearBrand { get; set; }
+    public bool BrandIdSet => BrandId.HasValue || ClearBrand;
+    public List<string>? Tags { get; set; }
+    public string? TagsCsv { get; set; }
+    public string? AttributesJson { get; set; }
+    public Dictionary<string, string>? Attributes { get; set; }
+}
+
+public class UpdateProductWithImagesRequest : IUpdateProductRequest
+{
+    public Guid? ShopId { get; set; }
+    public string? Name { get; set; }
+    public decimal? Price { get; set; }
+    public Guid? CategoryId { get; set; }
+    public string? Description { get; set; }
+    public string? ImageUrl { get; set; }
+    public int? StockQuantity { get; set; }
+    public Guid? BrandId { get; set; }
+    public bool ClearBrand { get; set; }
+    public bool BrandIdSet => BrandId.HasValue || ClearBrand;
+    public List<string>? Tags { get; set; }
+    public string? TagsCsv { get; set; }
+    public string? AttributesJson { get; set; }
+    public Dictionary<string, string>? Attributes => null;
+    public bool ReplaceImages { get; set; }
+    public bool ClearImages { get; set; }
     public IFormFile? Image { get; set; }
     public IFormFile? File { get; set; }
     public List<IFormFile>? Images { get; set; }
