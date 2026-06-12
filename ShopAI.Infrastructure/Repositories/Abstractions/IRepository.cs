@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using Domain.Entities;
 using Domain.Entities.Abstractions;
+using ShopAI.Infrastructure.Requests;
 
 namespace ShopAI.Infrastructure.Repositories.Abstractions;
 
@@ -32,6 +33,9 @@ public interface IProductRepository : IRepository<Product>
     Task<List<Product>> GetPopularAsync(int count);
     Task<List<Product>> GetProductsByShopAndCategoryAsync(Guid shopId, Guid categoryId);
     Task<List<Product>> GetProductsByCategoryAsync(Guid categoryId);
+    Task<(List<Product> Items, int TotalCount)> GetByFiltersAsync(
+        GetProductsByFiltersRequest filters, 
+        CancellationToken cancellationToken = default);
 }
 
 public interface ICategoryRepository : IRepository<Category>

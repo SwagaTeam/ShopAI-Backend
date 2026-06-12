@@ -9,6 +9,7 @@ using ShopAI.Application.Handlers;
 using ShopAI.Application.Models;
 using ShopAI.Infrastructure;
 using ShopAI.Infrastructure.Repositories.Abstractions;
+using ShopAI.Infrastructure.Requests;
 using ShopAI.Infrastructure.Storage;
 
 namespace ShopAI.Presentation.Controllers;
@@ -340,6 +341,22 @@ public class ProductsController(
         {
             return NotFound(new { message = ex.Message });
         }
+    }
+    
+    // WebApi/Controllers/ProductsController.cs
+    /// <summary>
+    /// Получение списка товаров с фильтрацией, сортировкой и пагинацией.
+    /// </summary>
+    /// <param name="request">Параметры фильтрации</param>
+    /// <response code="200">Список товаров успешно получен</response>
+    [HttpGet("filter")]
+    [ProducesResponseType(typeof(PagedResult<ProductDetailsDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<ProductDetailsDto>>> GetProductsByFilters(
+        [FromQuery] GetProductsByFiltersRequest request)
+    {
+        var query = new GetProductsByFiltersQuery(request);
+        var result = await mediator.Send(query);
+        return Ok(result);
     }
     
 
