@@ -51,4 +51,12 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
             .Include(p => p.Category)
             .Where(p => p.ShopId == shopId && p.CategoryId == categoryId)
             .ToListAsync();
+    
+    public async Task<List<Product>> GetProductsByCategoryAsync(Guid categoryId)
+        => await _context.Products
+            .Include(p => p.Shop)
+            .Include(p => p.Brand)
+            .Include(p => p.Category)
+            .Where(p => p.CategoryId == categoryId)
+            .ToListAsync();
 }

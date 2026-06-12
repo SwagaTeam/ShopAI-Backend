@@ -296,6 +296,52 @@ public class ProductsController(
             return NotFound(new { message = ex.Message });
         }
     }
+    
+    /// <summary>
+    /// Получение детальной информации о конкретном товаре по его категории.
+    /// </summary>
+    /// <param name="categoryId">Идентификатор категории (GUID).</param>
+    /// <response code="200">Данные товара успешно получены.</response>
+    /// <response code="404">Товар с указанным ID не найден.</response>
+    [HttpGet("get-by-category/{categoryId:guid}")]
+    [ProducesResponseType(typeof(ProductDetailsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ProductDetailsDto>>> GetByCategoryId(Guid categoryId)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetProductByCategoryIdQuery(categoryId));
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+    
+    /// <summary>
+    /// Получение детальной информации о конкретном товаре по его магазину и категории.
+    /// </summary>
+    /// <param name="categoryId">Идентификатор категории (GUID).</param>
+    /// <param name="shopId">Идентификатор категории (GUID).</param>
+    /// <response code="200">Данные товара успешно получены.</response>
+    /// <response code="404">Товар с указанным ID не найден.</response>
+    [HttpGet("get-by-category-and-shop-id/{categoryId:guid}/{shopId:guid}")]
+    [ProducesResponseType(typeof(ProductDetailsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProductDetailsDto>> GetByShopAndCategoryId(Guid categoryId, Guid shopId)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetProductByShopAndCategoryIdsQuery(categoryId, shopId));
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+    
 
     private async Task ApplyProductUpdateAsync(Product product, IUpdateProductRequest request, CancellationToken ct)
     {

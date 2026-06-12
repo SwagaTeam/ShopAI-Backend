@@ -31,6 +31,7 @@ public interface IProductRepository : IRepository<Product>
     Task<List<Product>> GetLatestAsync(int count);
     Task<List<Product>> GetPopularAsync(int count);
     Task<List<Product>> GetProductsByShopAndCategoryAsync(Guid shopId, Guid categoryId);
+    Task<List<Product>> GetProductsByCategoryAsync(Guid categoryId);
 }
 
 public interface ICategoryRepository : IRepository<Category>
