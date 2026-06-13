@@ -26,15 +26,13 @@ services:
       - OpenRouter__TopP=${OPENROUTER_TOP_P}
       - OpenRouter__ApiKey=${OPENROUTER_API_KEY}
       
-      # --- НАСТРОЙКИ ДЛЯ HTTPS (KESTREL) ---
       - ASPNETCORE_URLS=http://+:8080;https://+:8081
       - ASPNETCORE_Kestrel__Certificates__Default__Password=YourSecurePassword
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/root/.dotnet/https/test-cert.pfx
     ports:
-      - "5000:8080"   # Оставляем старый HTTP на всякий случай
-      - "443:8081"    # Маппим внешний HTTPS-порт сервера на внутренний порт .NET
+      - "5000:8080" 
+      - "443:8081"   
     volumes:
-      # Пробрасываем сертификат, который мы сгенерировали в папке на сервере
       - ./test-cert.pfx:/root/.dotnet/https/test-cert.pfx:ro
     depends_on:
       db:
