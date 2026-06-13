@@ -14,6 +14,8 @@ public class AuthController(IMediator mediator) : ControllerBase
     /// <summary>
     /// Регистрация нового пользователя.
     /// </summary>
+    /// <param name="command">Данные регистрации: имя, email, телефон и пароль.</param>
+    /// <returns>Идентификатор созданного пользователя.</returns>
     [HttpPost("register")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -26,6 +28,8 @@ public class AuthController(IMediator mediator) : ControllerBase
     /// <summary>
     /// Вход в систему (получение пары Access и Refresh токенов).
     /// </summary>
+    /// <param name="command">Учетные данные пользователя: email и пароль.</param>
+    /// <returns>Пара access и refresh токенов.</returns>
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -43,6 +47,8 @@ public class AuthController(IMediator mediator) : ControllerBase
     /// Позволяет получить новую пару токенов, если срок действия Access токена истек.
     /// Старый Refresh токен будет отозван (Rotational Refresh Tokens).
     /// </remarks>
+    /// <param name="command">Refresh-токен, который нужно обменять на новую пару токенов.</param>
+    /// <returns>Новая пара access и refresh токенов.</returns>
     [HttpPost("refresh")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

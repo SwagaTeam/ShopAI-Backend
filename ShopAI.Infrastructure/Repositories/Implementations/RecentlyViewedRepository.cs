@@ -10,30 +10,16 @@ namespace ShopAI.Infrastructure.Repositories.Implementations
 
         public async Task TrackViewAsync(Guid userId, Guid productId, CancellationToken ct)
         {
-            // 1. Проверяем, смотрел ли юзер этот товар ранее
-            var historyRecord = await context.Set<RecentlyViewedProduct>()
-                .FirstOrDefaultAsync(r => r.UserId == userId && r.ProductId == productId, ct);
+            var now = DateTime.UtcNow;
+            var id = Guid.CreateVersion7();
 
-            if (historyRecord != null)
-            {
-                // Если смотрел — просто обновляем время, чтобы товар поднялся наверх
-                historyRecord.ViewedAtUtc = DateTime.UtcNow;
-            }
-            else
-            {
-                // Если нет — добавляем новую запись
-                historyRecord = new RecentlyViewedProduct
-                {
-                    UserId = userId,
-                    ProductId = productId,
-                    ViewedAtUtc = DateTime.UtcNow
-                };
-                context.Set<RecentlyViewedProduct>().Add(historyRecord);
-            }
+            await context.Database.ExecuteSqlInterpolatedAsync($@"
+                INSERT INTO ""RecentlyViewedProduct"" (""Id"", ""UserId"", ""ProductId"", ""ViewedAtUtc"")
+                VALUES ({id}, {userId}, {productId}, {now})
+                ON CONFLICT (""UserId"", ""ProductId"")
+                DO UPDATE SET ""ViewedAtUtc"" = EXCLUDED.""ViewedAtUtc"";", ct);
 
-            await context.SaveChangesAsync(ct);
-
-            // 2. Очищаем старые записи, если превышен лимит
+            // Очищаем старые записи, если превышен лимит
             var excessRecords = await context.Set<RecentlyViewedProduct>()
                 .Where(r => r.UserId == userId)
                 .OrderByDescending(r => r.ViewedAtUtc)
@@ -49,18 +35,31 @@ namespace ShopAI.Infrastructure.Repositories.Implementations
 
         public async Task<List<Product>> GetHistoryAsync(Guid userId, int limit, CancellationToken ct)
         {
-            return await context.Set<RecentlyViewedProduct>()
+            var latestProductIds = await context.Set<RecentlyViewedProduct>()
                 .Where(r => r.UserId == userId)
+                .GroupBy(r => r.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    ViewedAtUtc = g.Max(r => r.ViewedAtUtc)
+                })
                 .OrderByDescending(r => r.ViewedAtUtc)
                 .Take(limit)
-                .Include(r => r.Product)
-                    .ThenInclude(p => p.Shop)
-                .Include(r => r.Product)
-                    .ThenInclude(p => p.Brand)
-                .Include(r => r.Product)
-                    .ThenInclude(p => p.Category)
-                .Select(r => r.Product)
+                .Select(r => r.ProductId)
                 .ToListAsync(ct);
+
+            var products = await context.Products
+                .Where(p => latestProductIds.Contains(p.Id))
+                .Include(p => p.Shop)
+                .Include(p => p.Brand)
+                .Include(p => p.Category)
+                .ToListAsync(ct);
+
+            return latestProductIds
+                .Select(productId => products.FirstOrDefault(p => p.Id == productId))
+                .Where(product => product != null)
+                .Cast<Product>()
+                .ToList();
         }
     }
 }

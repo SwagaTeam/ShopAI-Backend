@@ -7,6 +7,11 @@ using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers;
 
+/// <summary>
+/// Запрос на вход пользователя.
+/// </summary>
+/// <param name="Email">Email, указанный при регистрации.</param>
+/// <param name="Password">Пароль пользователя.</param>
 public record LoginUserCommand(string Email, string Password) : IRequest<AuthResponse>;
 
 public class LoginUserCommandHandler(

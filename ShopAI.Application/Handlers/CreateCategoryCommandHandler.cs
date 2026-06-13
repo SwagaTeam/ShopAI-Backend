@@ -4,6 +4,12 @@ using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers;
 
+/// <summary>
+/// Запрос на создание категории магазина.
+/// </summary>
+/// <param name="Name">Название категории.</param>
+/// <param name="ShopId">Идентификатор магазина, к которому относится категория.</param>
+/// <param name="ParentId">Необязательный идентификатор родительской категории для создания подкатегории.</param>
 public record CreateCategoryCommand(string Name, Guid ShopId, Guid? ParentId = null) : IRequest<Guid>;
 
 public class CreateCategoryCommandHandler(

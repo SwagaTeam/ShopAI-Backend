@@ -23,9 +23,25 @@ public class FilesController(
         "image/webp"
     };
 
+    /// <summary>
+    /// Загрузить основное изображение товара.
+    /// </summary>
+    /// <param name="productId">Идентификатор товара, к которому привязывается изображение.</param>
+    /// <param name="file">Файл изображения JPEG, PNG или WebP размером до 5 МБ.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <returns>Идентификатор файла и временная ссылка на просмотр.</returns>
+    /// <response code="200">Изображение загружено и назначено основным для товара.</response>
+    /// <response code="400">Файл пустой, слишком большой или имеет неподдерживаемый тип.</response>
+    /// <response code="404">Товар не найден.</response>
     [HttpPost("products/{productId:guid}/image")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<object>> UploadProductImage(Guid productId, IFormFile file, CancellationToken ct)
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<object>> UploadProductImage(
+        Guid productId,
+        [FromForm] IFormFile file,
+        CancellationToken ct)
     {
         var product = await productRepository.GetByIdAsync(productId);
         if (product == null) return NotFound("Product not found");
@@ -39,8 +55,25 @@ public class FilesController(
         return Ok(new { metadata.Id, Url = url });
     }
 
+    /// <summary>
+    /// Загрузить несколько изображений товара.
+    /// </summary>
+    /// <remarks>
+    /// Файлы можно передать в полях image/file для одного изображения или images/files для списка.
+    /// Если у товара еще нет основного изображения, первая загруженная картинка станет основной.
+    /// </remarks>
+    /// <param name="productId">Идентификатор товара, к которому привязываются изображения.</param>
+    /// <param name="request">Multipart-запрос с одним или несколькими файлами изображений.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <returns>Список идентификаторов загруженных файлов и временных ссылок.</returns>
+    /// <response code="200">Изображения успешно загружены.</response>
+    /// <response code="400">Файлы не переданы или один из файлов некорректен.</response>
+    /// <response code="404">Товар не найден.</response>
     [HttpPost("products/{productId:guid}/images")]
     [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<object>>> UploadProductImages(
         Guid productId,
         [FromForm] ProductImagesUploadRequest request,
@@ -82,8 +115,25 @@ public class FilesController(
         return Ok(result);
     }
 
+    /// <summary>
+    /// Загрузить логотип магазина.
+    /// </summary>
+    /// <param name="shopId">Идентификатор магазина, для которого загружается логотип.</param>
+    /// <param name="file">Файл логотипа JPEG, PNG или WebP размером до 5 МБ.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <returns>Идентификатор файла и временная ссылка на просмотр.</returns>
+    /// <response code="200">Логотип загружен и привязан к магазину.</response>
+    /// <response code="400">Файл пустой, слишком большой или имеет неподдерживаемый тип.</response>
+    /// <response code="404">Магазин не найден.</response>
     [HttpPost("shops/{shopId:guid}/logo")]
-    public async Task<ActionResult<object>> UploadShopLogo(Guid shopId, IFormFile file, CancellationToken ct)
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<object>> UploadShopLogo(
+        Guid shopId,
+        [FromForm] IFormFile file,
+        CancellationToken ct)
     {
         var shop = await shopRepository.GetByIdAsync(shopId);
         if (shop == null) return NotFound("Shop not found");
@@ -97,8 +147,17 @@ public class FilesController(
         return Ok(new { metadata.Id, Url = url });
     }
 
+    /// <summary>
+    /// Получить временную ссылку на файл.
+    /// </summary>
+    /// <param name="id">Идентификатор метаданных файла.</param>
+    /// <returns>Временная presigned-ссылка для скачивания или просмотра файла.</returns>
+    /// <response code="200">Ссылка успешно сформирована.</response>
+    /// <response code="404">Файл не найден.</response>
     [HttpGet("{id:guid}/url")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<object>> GetPresignedUrl(Guid id)
     {
         var metadata = await fileMetadataRepository.GetByIdAsync(id);
@@ -108,7 +167,16 @@ public class FilesController(
         return Ok(new { url });
     }
 
+    /// <summary>
+    /// Удалить файл из хранилища и базы метаданных.
+    /// </summary>
+    /// <param name="id">Идентификатор метаданных файла.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <response code="204">Файл успешно удален.</response>
+    /// <response code="404">Файл не найден.</response>
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var metadata = await fileMetadataRepository.GetByIdAsync(id);
@@ -173,10 +241,20 @@ public class FilesController(
     }
 }
 
+/// <summary>
+/// Multipart-запрос на загрузку изображений товара.
+/// </summary>
 public class ProductImagesUploadRequest
 {
+    /// <summary>Один файл изображения JPEG, PNG или WebP размером до 5 МБ.</summary>
     public IFormFile? Image { get; set; }
+
+    /// <summary>Альтернативное поле для одного файла изображения.</summary>
     public IFormFile? File { get; set; }
+
+    /// <summary>Список файлов изображений JPEG, PNG или WebP размером до 5 МБ каждый.</summary>
     public List<IFormFile>? Images { get; set; }
+
+    /// <summary>Альтернативное поле для списка файлов изображений.</summary>
     public List<IFormFile>? Files { get; set; }
 }

@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.HasPostgresExtension("pg_trgm");
 
         // --- USER ---
         modelBuilder.Entity<User>(builder =>
@@ -86,6 +87,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Product>(builder =>
         {
             builder.HasKey(p => p.Id);
+            builder.HasIndex(p => p.Name)
+                   .HasDatabaseName("IX_Products_Name_Trgm")
+                   .HasMethod("gin")
+                   .HasOperators("gin_trgm_ops");
+
             builder.Property(p => p.Price).HasPrecision(18, 2);
             builder.Property(p => p.Tags).HasMaxLength(2000).HasDefaultValue(string.Empty);
             builder.Property(p => p.AttributesJson).HasColumnType("jsonb").HasDefaultValue("{}");
@@ -208,6 +214,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RecentlyViewedProduct>(builder =>
         {
             builder.HasKey(rv => rv.Id);
+
+            // Один товар должен встречаться в истории пользователя только один раз
+            builder.HasIndex(rv => new { rv.UserId, rv.ProductId }).IsUnique();
 
             // Индекс для быстрой сортировки по дате просмотра
             builder.HasIndex(rv => new { rv.UserId, rv.ViewedAtUtc });

@@ -5,6 +5,13 @@ using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers;
 
+/// <summary>
+/// Запрос на создание магазина текущего пользователя.
+/// </summary>
+/// <param name="Name">Название магазина.</param>
+/// <param name="Description">Описание магазина.</param>
+/// <param name="LogoPath">Путь или URL логотипа магазина.</param>
+/// <param name="UrlAlias">Короткий уникальный псевдоним магазина для URL.</param>
 public record CreateShopCommand(string Name, string Description, string LogoPath, string UrlAlias) : IRequest<Guid>;
 
 public class CreateShopHandler(

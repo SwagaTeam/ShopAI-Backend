@@ -99,11 +99,11 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
 
         if (!string.IsNullOrWhiteSpace(filters.SearchTerm))
         {
-            var searchTerm = filters.SearchTerm.ToLower();
+            var searchTerm = filters.SearchTerm.Trim();
+            var likePattern = $"%{EscapeLikePattern(searchTerm)}%";
             query = query.Where(p =>
-                p.Name.ToLower().Contains(searchTerm) ||
-                p.Description.ToLower().Contains(searchTerm) ||
-                p.Tags.ToLower().Contains(searchTerm));
+                EF.Functions.TrigramsAreSimilar(p.Name, searchTerm) ||
+                EF.Functions.ILike(p.Name, likePattern, "\\"));
         }
 
         if (filters.MinPrice.HasValue)
@@ -140,11 +140,22 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
     {
         if (string.IsNullOrWhiteSpace(filters.SortBy))
         {
+            if (!string.IsNullOrWhiteSpace(filters.SearchTerm))
+            {
+                var searchTerm = filters.SearchTerm.Trim();
+                return query
+                    .OrderByDescending(p => EF.Functions.TrigramsSimilarity(p.Name, searchTerm))
+                    .ThenByDescending(p => p.Id);
+            }
+
             return query.OrderByDescending(p => p.Id);
         }
     
         return filters.SortBy.ToLower() switch
         {
+            "relevance" when !string.IsNullOrWhiteSpace(filters.SearchTerm) => query
+                .OrderByDescending(p => EF.Functions.TrigramsSimilarity(p.Name, filters.SearchTerm.Trim()))
+                .ThenByDescending(p => p.Id),
             "price" => filters.SortDescending
                 ? query.OrderByDescending(p => p.Price)
                 : query.OrderBy(p => p.Price),
@@ -157,7 +168,18 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
             "stock" => filters.SortDescending
                 ? query.OrderByDescending(p => p.StockQuantity)
                 : query.OrderBy(p => p.StockQuantity),
+            "createdat" => filters.SortDescending
+                ? query.OrderByDescending(p => p.Id)
+                : query.OrderBy(p => p.Id),
             _ => query.OrderByDescending(p => p.Id) 
         };
+    }
+
+    private static string EscapeLikePattern(string value)
+    {
+        return value
+            .Replace(@"\", @"\\")
+            .Replace("%", @"\%")
+            .Replace("_", @"\_");
     }
 }

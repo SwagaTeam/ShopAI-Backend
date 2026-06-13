@@ -21,7 +21,23 @@ public class PaymentsController(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration) : ControllerBase
 {
+    /// <summary>
+    /// Создать платеж по товарам из корзины текущего пользователя.
+    /// </summary>
+    /// <remarks>
+    /// Корзина разбивается на заказы по магазинам, после чего создается платеж YooKassa или локальный fallback-платеж, если настройки YooKassa не заданы.
+    /// После успешного создания платежа корзина очищается.
+    /// </remarks>
+    /// <param name="request">Данные оформления: адрес доставки, телефон, комментарий и URL возврата после оплаты.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <returns>Данные созданного платежа, список заказов и ссылка для подтверждения оплаты.</returns>
+    /// <response code="200">Платеж и связанные заказы успешно созданы.</response>
+    /// <response code="400">Некорректные данные оформления или пустая корзина.</response>
+    /// <response code="401">Пользователь не авторизован.</response>
     [HttpPost("checkout")]
+    [ProducesResponseType(typeof(CheckoutResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<CheckoutResponse>> Checkout(
         [FromBody] CheckoutRequest? request,
         CancellationToken ct)
@@ -106,7 +122,26 @@ public class PaymentsController(
             payment.ConfirmationUrl));
     }
 
+    /// <summary>
+    /// Подтвердить тестовый или fallback-платеж вручную.
+    /// </summary>
+    /// <remarks>
+    /// Используется, когда платежный провайдер не настроен и API вернул confirmationUrl вида /api/Payments/{paymentId}/confirm.
+    /// Переводит указанные заказы текущего пользователя в статус обработки и помечает оплату как succeeded.
+    /// </remarks>
+    /// <param name="paymentId">Локальный идентификатор платежа.</param>
+    /// <param name="request">Список заказов, которые нужно подтвердить как оплаченные.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <returns>Статус подтвержденного платежа.</returns>
+    /// <response code="200">Платеж успешно подтвержден.</response>
+    /// <response code="400">Не передан список заказов.</response>
+    /// <response code="401">Пользователь не авторизован.</response>
+    /// <response code="404">Один или несколько заказов не найдены.</response>
     [HttpPost("{paymentId:guid}/confirm")]
+    [ProducesResponseType(typeof(PaymentStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PaymentStatusResponse>> Confirm(
         Guid paymentId,
         [FromBody] ConfirmPaymentRequest request,
@@ -134,8 +169,19 @@ public class PaymentsController(
         return Ok(new PaymentStatusResponse(paymentId, request.OrderIds, "succeeded"));
     }
 
+    /// <summary>
+    /// Принять webhook от YooKassa об изменении статуса платежа.
+    /// </summary>
+    /// <param name="payload">JSON-событие YooKassa. Идентификатор платежа берется из поля object.id или id.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <response code="200">Webhook обработан, статусы связанных заказов обновлены.</response>
+    /// <response code="400">В payload отсутствует идентификатор платежа.</response>
+    /// <response code="404">Заказы с таким платежом не найдены.</response>
     [AllowAnonymous]
     [HttpPost("yookassa/webhook")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> YooKassaWebhook([FromBody] JsonElement payload, CancellationToken ct)
     {
         var paymentObject = payload.TryGetProperty("object", out var obj) ? obj : payload;
@@ -263,6 +309,14 @@ public class PaymentsController(
     }
 }
 
+/// <summary>
+/// Данные оформления заказа и создания платежа.
+/// </summary>
+/// <param name="ReturnUrl">URL, на который YooKassa вернет пользователя после оплаты. Если не передан, используется настройка YooKassa:ReturnUrl.</param>
+/// <param name="DeliveryAddressId">Идентификатор сохраненного адреса доставки текущего пользователя.</param>
+/// <param name="DeliveryAddressText">Текст нового адреса доставки, если DeliveryAddressId не используется. Длина от 10 до 500 символов.</param>
+/// <param name="ContactPhone">Контактный телефон получателя. Длина от 5 до 30 символов.</param>
+/// <param name="Comment">Комментарий к заказу. Максимум 500 символов.</param>
 public record CheckoutRequest(
     string? ReturnUrl,
     Guid? DeliveryAddressId,
@@ -270,6 +324,15 @@ public record CheckoutRequest(
     string? ContactPhone,
     string? Comment);
 
+/// <summary>
+/// Ответ с данными созданного платежа.
+/// </summary>
+/// <param name="PaymentId">Локальный идентификатор платежа.</param>
+/// <param name="OrderIds">Идентификаторы заказов, созданных из корзины.</param>
+/// <param name="Amount">Итоговая сумма платежа.</param>
+/// <param name="Currency">Валюта платежа.</param>
+/// <param name="Status">Статус платежа у провайдера или fallback-статус.</param>
+/// <param name="ConfirmationUrl">Ссылка для перехода к оплате или локального подтверждения.</param>
 public record CheckoutResponse(
     Guid PaymentId,
     List<Guid> OrderIds,
@@ -278,8 +341,18 @@ public record CheckoutResponse(
     string Status,
     string ConfirmationUrl);
 
+/// <summary>
+/// Запрос на ручное подтверждение платежа.
+/// </summary>
+/// <param name="OrderIds">Идентификаторы заказов текущего пользователя, которые нужно пометить оплаченными.</param>
 public record ConfirmPaymentRequest(List<Guid> OrderIds);
 
+/// <summary>
+/// Ответ со статусом платежа после подтверждения.
+/// </summary>
+/// <param name="PaymentId">Идентификатор платежа.</param>
+/// <param name="OrderIds">Идентификаторы подтвержденных заказов.</param>
+/// <param name="Status">Итоговый статус платежа.</param>
 public record PaymentStatusResponse(Guid PaymentId, List<Guid> OrderIds, string Status);
 
 internal record CreatedPayment(Guid PaymentId, string ProviderPaymentId, string Status, string ConfirmationUrl);

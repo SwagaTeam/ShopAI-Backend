@@ -50,6 +50,40 @@ public class CartController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
+    /// Добавить AI-бандл товаров в корзину.
+    /// </summary>
+    /// <remarks>
+    /// Передайте productIds из выбранного элемента bundles, который вернул /api/ai/shopping-assistant.
+    /// Если товар уже есть в корзине, его количество увеличится на quantity. Если корзины еще нет, она будет создана.
+    /// </remarks>
+    /// <param name="command">Список товаров бандла и количество каждого товара для добавления.</param>
+    /// <response code="200">Бандл успешно добавлен в корзину.</response>
+    /// <response code="400">Список товаров пустой или quantity меньше 1.</response>
+    /// <response code="401">Пользователь не авторизован.</response>
+    /// <response code="404">Один из товаров бандла не найден.</response>
+    [HttpPost("bundles")]
+    [ProducesResponseType(typeof(AddBundleToCartResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AddBundleToCartResult>> AddBundle([FromBody] AddBundleToCartCommand command)
+    {
+        try
+        {
+            var result = await mediator.Send(command);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Полностью удалить товар из корзины.
     /// </summary>
     /// <remarks>

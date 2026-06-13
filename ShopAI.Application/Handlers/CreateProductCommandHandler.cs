@@ -5,6 +5,19 @@ using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers;
 
+/// <summary>
+/// Запрос на создание товара.
+/// </summary>
+/// <param name="ShopId">Идентификатор магазина, в котором создается товар.</param>
+/// <param name="Name">Название товара. Должно быть уникальным внутри магазина.</param>
+/// <param name="Price">Цена товара. Должна быть больше нуля.</param>
+/// <param name="CategoryId">Идентификатор категории товара. Категория должна принадлежать указанному магазину.</param>
+/// <param name="Description">Описание товара.</param>
+/// <param name="ImageUrl">Путь или URL основного изображения товара.</param>
+/// <param name="StockQuantity">Количество товара на складе. Не может быть отрицательным.</param>
+/// <param name="BrandId">Необязательный идентификатор бренда товара.</param>
+/// <param name="Tags">Необязательный список тегов товара.</param>
+/// <param name="Attributes">Необязательные характеристики товара в формате ключ-значение.</param>
 public record CreateProductCommand(
     Guid ShopId,
     string Name,

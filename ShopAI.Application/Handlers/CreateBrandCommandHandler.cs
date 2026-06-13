@@ -6,6 +6,11 @@ using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers
 {
+    /// <summary>
+    /// Запрос на создание бренда.
+    /// </summary>
+    /// <param name="Name">Название бренда. Должно быть уникальным.</param>
+    /// <param name="LogoUrl">URL или путь к логотипу бренда.</param>
     public record CreateBrandCommand(string Name, string LogoUrl) : IRequest<Guid>;
     public class CreateBrandCommandHandler(IBrandRepository brandRepository) : IRequestHandler<CreateBrandCommand, Guid>
     {

@@ -45,5 +45,39 @@ namespace ShopAI.Presentation.Controllers
             var isAdded = await mediator.Send(new ToggleFavoriteCommand(productId));
             return Ok(new { isAdded });
         }
+
+        /// <summary>
+        /// Добавить AI-бандл товаров в избранное.
+        /// </summary>
+        /// <remarks>
+        /// Передайте productIds из выбранного элемента bundles, который вернул /api/ai/shopping-assistant.
+        /// В отличие от toggle, этот метод только добавляет товары: уже избранные товары остаются в избранном и возвращаются в alreadyInFavoritesProductIds.
+        /// </remarks>
+        /// <param name="command">Список товаров бандла, которые нужно добавить в избранное.</param>
+        /// <response code="200">Бандл обработан, отсутствующие товары добавлены в избранное.</response>
+        /// <response code="400">Список товаров пустой.</response>
+        /// <response code="401">Пользователь не авторизован.</response>
+        /// <response code="404">Один из товаров бандла не найден.</response>
+        [HttpPost("bundles")]
+        [ProducesResponseType(typeof(AddBundleToFavoritesResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<AddBundleToFavoritesResult>> AddBundle([FromBody] AddBundleToFavoritesCommand command)
+        {
+            try
+            {
+                var result = await mediator.Send(command);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
     }
 }

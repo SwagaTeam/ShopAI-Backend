@@ -75,6 +75,19 @@ public class ProductsController(
         return CreatedAtAction(nameof(GetById), new { id = productId }, productId);
     }
 
+    /// <summary>
+    /// Создать товар вместе с одной или несколькими фотографиями.
+    /// </summary>
+    /// <remarks>
+    /// Принимает multipart/form-data. Данные товара передаются обычными form-полями, изображения - в полях image/file или images/files.
+    /// Первое успешно загруженное изображение становится основной картинкой товара.
+    /// </remarks>
+    /// <param name="request">Данные создаваемого товара, теги, характеристики и загружаемые изображения.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <returns>Идентификатор созданного товара.</returns>
+    /// <response code="201">Товар создан, изображения при наличии загружены.</response>
+    /// <response code="400">Некорректные поля товара, JSON характеристик или файл изображения.</response>
+    /// <response code="404">Указанный магазин, категория или бренд не найдены.</response>
     [HttpPost("with-image")]
     [Authorize(Roles = "Admin")]
     [Consumes("multipart/form-data")]
@@ -132,6 +145,18 @@ public class ProductsController(
         return CreatedAtAction(nameof(GetById), new { id = productId }, productId);
     }
 
+    /// <summary>
+    /// Обновить данные товара без загрузки файлов.
+    /// </summary>
+    /// <remarks>
+    /// Все поля в теле запроса опциональны: переданные значения заменяют текущие данные товара, отсутствующие поля остаются без изменений.
+    /// </remarks>
+    /// <param name="id">Идентификатор товара, который нужно обновить.</param>
+    /// <param name="request">Новые значения полей товара: магазин, категория, бренд, цена, остаток, описание, теги и характеристики.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <response code="204">Товар успешно обновлен.</response>
+    /// <response code="400">Некорректные данные, нарушена связка магазина и категории или найден дубль названия.</response>
+    /// <response code="404">Товар не найден.</response>
     [HttpPut("{id:guid}")]
     [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -159,6 +184,31 @@ public class ProductsController(
         return NoContent();
     }
 
+    /// <summary>
+    /// Обновить товар и управлять его изображениями.
+    /// </summary>
+    /// <remarks>
+    /// Маршрут: PUT /api/Products/{id}/with-images.
+    ///
+    /// Используется для редактирования карточки товара через multipart/form-data, когда вместе с текстовыми полями нужно загрузить новые изображения,
+    /// заменить текущие изображения или полностью очистить галерею.
+    ///
+    /// Параметр пути id - GUID существующего товара. В form-data можно передать любые поля товара: shopId, name, price, categoryId, description,
+    /// imageUrl, stockQuantity, brandId, clearBrand, tags/tagsCsv и attributesJson. Неуказанные поля остаются без изменений.
+    ///
+    /// Изображения можно отправлять в одно из совместимых полей: image или file для одного файла, images или files для списка файлов.
+    /// Разрешены только image/jpeg, image/png и image/webp, размер каждого файла - до 5 МБ.
+    ///
+    /// replaceImages=true сначала удаляет все старые изображения товара, затем сохраняет новые файлы.
+    /// clearImages=true удаляет все старые изображения и очищает основную картинку; если одновременно переданы новые файлы, они будут загружены после очистки.
+    /// Если replaceImages и clearImages не переданы, новые изображения добавляются к существующим, а первая новая картинка становится основной.
+    /// </remarks>
+    /// <param name="id">Идентификатор обновляемого товара.</param>
+    /// <param name="request">Multipart/form-data с новыми полями товара, флагами управления изображениями и файлами.</param>
+    /// <param name="ct">Токен отмены запроса.</param>
+    /// <response code="204">Товар и изображения успешно обновлены.</response>
+    /// <response code="400">Некорректные поля товара, JSON характеристик, связь магазина и категории или файл изображения.</response>
+    /// <response code="404">Товар не найден.</response>
     [HttpPut("{id:guid}/with-images")]
     [Authorize(Roles = "Admin")]
     [Consumes("multipart/form-data")]
@@ -213,40 +263,75 @@ public class ProductsController(
     }
 
 
+    /// <summary>
+    /// Полностью заменить набор тегов товара.
+    /// </summary>
+    /// <param name="id">Идентификатор товара, для которого заменяются теги.</param>
+    /// <param name="tags">Новый список тегов. Пустой список очищает теги товара.</param>
+    /// <response code="204">Теги товара успешно заменены.</response>
     [HttpPut("{id:guid}/tags")]
     [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetTags(Guid id, [FromBody] List<string> tags)
     {
         await mediator.Send(new SetProductTagsCommand(id, tags));
         return NoContent();
     }
 
+    /// <summary>
+    /// Добавить теги к товару без удаления существующих.
+    /// </summary>
+    /// <param name="id">Идентификатор товара, к которому добавляются теги.</param>
+    /// <param name="tags">Список новых тегов. Дубликаты будут нормализованы и отброшены.</param>
+    /// <response code="204">Теги успешно добавлены.</response>
     [HttpPost("{id:guid}/tags")]
     [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> AddTags(Guid id, [FromBody] List<string> tags)
     {
         await mediator.Send(new AddProductTagsCommand(id, tags));
         return NoContent();
     }
 
+    /// <summary>
+    /// Удалить указанные теги из товара.
+    /// </summary>
+    /// <param name="id">Идентификатор товара, у которого удаляются теги.</param>
+    /// <param name="tags">Список тегов, которые нужно убрать из товара.</param>
+    /// <response code="204">Указанные теги удалены или уже отсутствовали.</response>
     [HttpDelete("{id:guid}/tags")]
     [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RemoveTags(Guid id, [FromBody] List<string> tags)
     {
         await mediator.Send(new RemoveProductTagsCommand(id, tags));
         return NoContent();
     }
 
+    /// <summary>
+    /// Полностью заменить характеристики товара.
+    /// </summary>
+    /// <param name="id">Идентификатор товара, для которого задаются характеристики.</param>
+    /// <param name="attributes">Словарь характеристик, где ключ - название характеристики, значение - ее значение.</param>
+    /// <response code="204">Характеристики товара успешно заменены.</response>
     [HttpPut("{id:guid}/attributes")]
     [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetAttributes(Guid id, [FromBody] Dictionary<string, string> attributes)
     {
         await mediator.Send(new SetProductAttributesCommand(id, attributes));
         return NoContent();
     }
 
+    /// <summary>
+    /// Удалить одну характеристику товара по ключу.
+    /// </summary>
+    /// <param name="id">Идентификатор товара.</param>
+    /// <param name="key">Ключ характеристики, которую нужно удалить.</param>
+    /// <response code="204">Характеристика удалена или уже отсутствовала.</response>
     [HttpDelete("{id:guid}/attributes/{key}")]
     [Authorize(Roles = "Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RemoveAttribute(Guid id, string key)
     {
         await mediator.Send(new RemoveProductAttributeCommand(id, key));
@@ -324,7 +409,7 @@ public class ProductsController(
     /// Получение детальной информации о конкретном товаре по его магазину и категории.
     /// </summary>
     /// <param name="categoryId">Идентификатор категории (GUID).</param>
-    /// <param name="shopId">Идентификатор категории (GUID).</param>
+    /// <param name="shopId">Идентификатор магазина (GUID).</param>
     /// <response code="200">Данные товара успешно получены.</response>
     /// <response code="404">Товар с указанным ID не найден.</response>
     [HttpGet("get-by-category-and-shop-id/{categoryId:guid}/{shopId:guid}")]
@@ -522,21 +607,51 @@ public class ProductsController(
     }
 }
 
+/// <summary>
+/// Multipart-запрос на создание товара с изображениями.
+/// </summary>
 public class CreateProductWithImageRequest
 {
+    /// <summary>Идентификатор магазина, в котором создается товар.</summary>
     public Guid ShopId { get; set; }
+
+    /// <summary>Название товара. Должно быть уникальным внутри выбранного магазина.</summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Цена товара. Должна быть больше нуля.</summary>
     public decimal Price { get; set; }
+
+    /// <summary>Идентификатор категории товара. Категория должна принадлежать указанному магазину.</summary>
     public Guid CategoryId { get; set; }
+
+    /// <summary>Описание товара, отображаемое в карточке.</summary>
     public string? Description { get; set; }
+
+    /// <summary>Количество товара на складе. Не может быть отрицательным.</summary>
     public int StockQuantity { get; set; }
+
+    /// <summary>Необязательный идентификатор бренда товара.</summary>
     public Guid? BrandId { get; set; }
+
+    /// <summary>Список тегов товара. Значения нормализуются и сохраняются без дублей.</summary>
     public List<string>? Tags { get; set; }
+
+    /// <summary>Теги одной строкой через запятую. Можно использовать вместе с Tags.</summary>
     public string? TagsCsv { get; set; }
+
+    /// <summary>Характеристики товара в формате JSON-объекта, например {"color":"black","memory":"128GB"}.</summary>
     public string? AttributesJson { get; set; }
+
+    /// <summary>Один файл изображения. Разрешены JPEG, PNG и WebP до 5 МБ.</summary>
     public IFormFile? Image { get; set; }
+
+    /// <summary>Альтернативное поле для одного файла изображения. Используется для совместимости с клиентами.</summary>
     public IFormFile? File { get; set; }
+
+    /// <summary>Список изображений товара. Первое загруженное изображение станет основным.</summary>
     public List<IFormFile>? Images { get; set; }
+
+    /// <summary>Альтернативное поле для списка изображений. Используется для совместимости с клиентами.</summary>
     public List<IFormFile>? Files { get; set; }
 }
 
@@ -557,44 +672,113 @@ public interface IUpdateProductRequest
     Dictionary<string, string>? Attributes { get; }
 }
 
+/// <summary>
+/// Запрос на частичное обновление товара без загрузки файлов.
+/// </summary>
 public class UpdateProductRequest : IUpdateProductRequest
 {
+    /// <summary>Новый магазин товара. Если не передан, магазин не меняется.</summary>
     public Guid? ShopId { get; set; }
+
+    /// <summary>Новое название товара. Проверяется на уникальность внутри выбранного магазина.</summary>
     public string? Name { get; set; }
+
+    /// <summary>Новая цена товара. Должна быть больше нуля.</summary>
     public decimal? Price { get; set; }
+
+    /// <summary>Новая категория товара. Категория должна принадлежать итоговому магазину товара.</summary>
     public Guid? CategoryId { get; set; }
+
+    /// <summary>Новое описание товара.</summary>
     public string? Description { get; set; }
+
+    /// <summary>Новый путь или URL основного изображения без загрузки файла.</summary>
     public string? ImageUrl { get; set; }
+
+    /// <summary>Новое количество товара на складе. Не может быть отрицательным.</summary>
     public int? StockQuantity { get; set; }
+
+    /// <summary>Новый бренд товара. Если нужно очистить бренд, используйте ClearBrand.</summary>
     public Guid? BrandId { get; set; }
+
+    /// <summary>Если true, удаляет привязку товара к бренду.</summary>
     public bool ClearBrand { get; set; }
+
     public bool BrandIdSet => BrandId.HasValue || ClearBrand;
+
+    /// <summary>Новый полный список тегов товара.</summary>
     public List<string>? Tags { get; set; }
+
+    /// <summary>Новый полный список тегов одной строкой через запятую.</summary>
     public string? TagsCsv { get; set; }
+
+    /// <summary>Новые характеристики товара в формате JSON-объекта со строковыми значениями.</summary>
     public string? AttributesJson { get; set; }
+
+    /// <summary>Новые характеристики товара как JSON-объект в теле запроса.</summary>
     public Dictionary<string, string>? Attributes { get; set; }
 }
 
+/// <summary>
+/// Multipart-запрос на частичное обновление товара и управление его изображениями.
+/// </summary>
 public class UpdateProductWithImagesRequest : IUpdateProductRequest
 {
+    /// <summary>Новый магазин товара. Если не передан, магазин не меняется.</summary>
     public Guid? ShopId { get; set; }
+
+    /// <summary>Новое название товара. Проверяется на уникальность внутри итогового магазина.</summary>
     public string? Name { get; set; }
+
+    /// <summary>Новая цена товара. Должна быть больше нуля.</summary>
     public decimal? Price { get; set; }
+
+    /// <summary>Новая категория товара. Категория должна принадлежать итоговому магазину товара.</summary>
     public Guid? CategoryId { get; set; }
+
+    /// <summary>Новое описание товара.</summary>
     public string? Description { get; set; }
+
+    /// <summary>Новый путь или URL основного изображения без загрузки файла.</summary>
     public string? ImageUrl { get; set; }
+
+    /// <summary>Новое количество товара на складе. Не может быть отрицательным.</summary>
     public int? StockQuantity { get; set; }
+
+    /// <summary>Новый бренд товара. Если нужно очистить бренд, используйте ClearBrand.</summary>
     public Guid? BrandId { get; set; }
+
+    /// <summary>Если true, удаляет привязку товара к бренду.</summary>
     public bool ClearBrand { get; set; }
+
     public bool BrandIdSet => BrandId.HasValue || ClearBrand;
+
+    /// <summary>Новый полный список тегов товара.</summary>
     public List<string>? Tags { get; set; }
+
+    /// <summary>Новый полный список тегов одной строкой через запятую.</summary>
     public string? TagsCsv { get; set; }
+
+    /// <summary>Новые характеристики товара в формате JSON-объекта со строковыми значениями.</summary>
     public string? AttributesJson { get; set; }
+
     public Dictionary<string, string>? Attributes => null;
+
+    /// <summary>Если true, перед загрузкой новых файлов удаляет все старые изображения товара.</summary>
     public bool ReplaceImages { get; set; }
+
+    /// <summary>Если true, удаляет все старые изображения и очищает основную картинку товара.</summary>
     public bool ClearImages { get; set; }
+
+    /// <summary>Один новый файл изображения. Разрешены JPEG, PNG и WebP до 5 МБ.</summary>
     public IFormFile? Image { get; set; }
+
+    /// <summary>Альтернативное поле для одного нового файла изображения. Используется для совместимости с клиентами.</summary>
     public IFormFile? File { get; set; }
+
+    /// <summary>Список новых изображений товара.</summary>
     public List<IFormFile>? Images { get; set; }
+
+    /// <summary>Альтернативное поле для списка новых изображений. Используется для совместимости с клиентами.</summary>
     public List<IFormFile>? Files { get; set; }
 }

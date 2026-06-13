@@ -6,6 +6,13 @@ using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers;
 
+/// <summary>
+/// Запрос на регистрацию нового пользователя.
+/// </summary>
+/// <param name="FullName">Полное имя пользователя.</param>
+/// <param name="Email">Email пользователя. Используется для входа и должен быть уникальным.</param>
+/// <param name="Phone">Контактный телефон пользователя.</param>
+/// <param name="Password">Пароль пользователя в открытом виде; на сервере сохраняется только хеш.</param>
 public record RegisterUserCommand(string FullName, string Email, string Phone, string Password) : IRequest<Guid>;
 
 public class RegisterUserCommandHandler(

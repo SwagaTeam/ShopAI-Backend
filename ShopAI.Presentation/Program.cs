@@ -45,10 +45,17 @@ services.AddSwaggerGen(options =>
         }
     });
 
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath))
-        options.IncludeXmlComments(xmlPath);
+    foreach (var xmlFile in new[]
+             {
+                 $"{Assembly.GetExecutingAssembly().GetName().Name}.xml",
+                 "ShopAI.Application.xml",
+                 "ShopAI.Infrastructure.xml"
+             })
+    {
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        if (File.Exists(xmlPath))
+            options.IncludeXmlComments(xmlPath);
+    }
 });
 
 services.AddSwaggerGenNewtonsoftSupport();

@@ -6,6 +6,10 @@ using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers
 {
+    /// <summary>
+    /// Запрос на обновление пары JWT-токенов.
+    /// </summary>
+    /// <param name="RefreshToken">Действующий refresh-токен, выданный при входе или предыдущем обновлении.</param>
     public record RefreshTokenCommand(string RefreshToken) : IRequest<TokenResponse>;
 
     public class RefreshTokenHandler(

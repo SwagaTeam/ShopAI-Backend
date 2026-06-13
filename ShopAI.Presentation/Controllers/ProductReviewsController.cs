@@ -39,7 +39,7 @@ public class ProductReviewsController(IMediator mediator) : ControllerBase
     /// Один пользователь может оставить только один отзыв на один и тот же товар.
     /// </remarks>
     /// <param name="productId">Идентификатор товара.</param>
-    /// <param name="command">Данные отзыва (оценка и комментарий).</param>
+    /// <param name="request">Данные отзыва (оценка и комментарий).</param>
     /// <response code="200">Отзыв успешно добавлен. Возвращает ID созданного отзыва.</response>
     /// <response code="400">Неверная оценка или попытка оставить дубликат отзыва.</response>
     /// <response code="401">Пользователь не авторизован.</response>
@@ -61,4 +61,6 @@ public class ProductReviewsController(IMediator mediator) : ControllerBase
 /// <summary>
 /// Модель запроса для добавления отзыва.
 /// </summary>
+/// <param name="Rating">Оценка товара от 1 до 5.</param>
+/// <param name="Comment">Текстовый комментарий к отзыву.</param>
 public record AddReviewRequest(int Rating, string Comment);
