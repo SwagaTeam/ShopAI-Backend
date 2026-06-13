@@ -40,7 +40,7 @@ public class FilesController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<object>> UploadProductImage(
         Guid productId,
-        [FromForm] IFormFile file,
+        IFormFile file,
         CancellationToken ct)
     {
         var product = await productRepository.GetByIdAsync(productId);
@@ -132,7 +132,7 @@ public class FilesController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<object>> UploadShopLogo(
         Guid shopId,
-        [FromForm] IFormFile file,
+        IFormFile file,
         CancellationToken ct)
     {
         var shop = await shopRepository.GetByIdAsync(shopId);
