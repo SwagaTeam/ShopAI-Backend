@@ -104,11 +104,9 @@ public class ShoppingAssistantQueryHandler(
             _ => ranked.OrderByDescending(x => x.Score).ThenByDescending(x => x.Product.Id)
         };
 
-        var products = (ranked.Count > 0
-                ? ordered.Select(x => x.Product)
-                : pool.OrderByDescending(p => p.Id))
-            .Take(limit)
-            .ToList();
+        var products = ranked.Count > 0
+            ? ordered.Select(x => x.Product).Take(limit).ToList()
+            : new List<Product>();
 
         var items = await productDtoFactory.CreateShortDtosAsync(products, ct);
         var bundles = await BuildBundlesAsync(request.Request.UserPrompt, interpreted, budgetMin, budgetMax, ct);
