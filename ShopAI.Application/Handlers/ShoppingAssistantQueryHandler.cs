@@ -67,6 +67,7 @@ public class ShoppingAssistantQueryHandler(
             .Include(p => p.Shop)
             .Include(p => p.Brand)
             .Include(p => p.Category)
+            .Where(p => p.StockQuantity > 0)
             .AsQueryable();
 
         if (request.Request.CategoryId.HasValue)
@@ -89,14 +90,6 @@ public class ShoppingAssistantQueryHandler(
             .Where(x => terms.Count == 0 || x.Score > 0)
             .ToList();
 
-        if (ranked.Count == 0 && terms.Count > 0)
-        {
-            ranked = pool
-                .Select(p => new { Product = p, Score = SoftScoreProduct(p, terms) })
-                .Where(x => x.Score > 0)
-                .ToList();
-        }
-
         var ordered = interpreted.PriceSort switch
         {
             "asc" => ranked.OrderBy(x => x.Product.Price).ThenByDescending(x => x.Score),
@@ -106,8 +99,7 @@ public class ShoppingAssistantQueryHandler(
 
         var products = (ranked.Count > 0
             ? ordered.Select(x => x.Product).Take(limit).ToList()
-            : new List<Product>())
-            .Where(x=>x.StockQuantity > 0).ToList();
+            : new List<Product>());
 
         var items = await productDtoFactory.CreateShortDtosAsync(products, ct);
         var bundles = await BuildBundlesAsync(request.Request.UserPrompt, interpreted, budgetMin, budgetMax, ct);
@@ -130,6 +122,7 @@ public class ShoppingAssistantQueryHandler(
             .Include(p => p.Shop)
             .Include(p => p.Brand)
             .Include(p => p.Category)
+            .Where(p => p.StockQuantity > 0)
             .Where(p => !budgetMin.HasValue || p.Price >= budgetMin.Value)
             .Where(p => !budgetMax.HasValue || p.Price <= budgetMax.Value);
 
@@ -298,12 +291,6 @@ public class ShoppingAssistantQueryHandler(
         }
 
         return score;
-    }
-
-    private static int SoftScoreProduct(Product product, IReadOnlyCollection<string> terms)
-    {
-        var haystack = $"{product.Name} {product.Description} {product.Tags} {product.AttributesJson} {product.Brand?.Name} {product.Category?.Name}";
-        return terms.Count(term => haystack.Contains(term, StringComparison.OrdinalIgnoreCase));
     }
 
     private static List<string> BuildSearchTerms(string prompt, InterpretedShoppingQuery interpreted)

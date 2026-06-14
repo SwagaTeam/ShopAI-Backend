@@ -13,7 +13,8 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
             .Include(p => p.Shop)
             .Include(p => p.Brand)
             .Include(p => p.Category)
-            .FirstOrDefaultAsync(p => p.Id == id) ?? null;
+            .ThenInclude(c => c.GlobalCategory)
+            .FirstOrDefaultAsync(p => p.Id == id && p.StockQuantity > 0) ?? null;
     }
 
     public async Task<List<Product>> GetByShopIdAsync(Guid shopId)
@@ -21,7 +22,7 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
             .Include(p => p.Shop)
             .Include(p => p.Brand)
             .Include(p => p.Category)
-            .Where(p => p.ShopId == shopId)
+            .Where(p => p.ShopId == shopId && p.StockQuantity > 0)
             .ToListAsync();
 
     public async Task<List<Product>> GetLatestAsync(int count)
@@ -29,6 +30,7 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
             .Include(p => p.Shop)
             .Include(p => p.Brand)
             .Include(p => p.Category)
+            .Where(p => p.StockQuantity > 0)
             .OrderByDescending(p => p.Id)
             .Take(count)
             .ToListAsync();
@@ -39,6 +41,7 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
             .Include(p => p.Brand)
             .Include(p => p.Category)
             .Include(p => p.Reviews)
+            .Where(p => p.StockQuantity > 0)
             .OrderByDescending(p => p.Reviews.Any() ? p.Reviews.Average(r => r.Rating) : 0)
             .ThenByDescending(p => p.Reviews.Count)
             .ThenByDescending(p => p.StockQuantity)
@@ -50,7 +53,7 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
             .Include(p => p.Shop)
             .Include(p => p.Brand)
             .Include(p => p.Category)
-            .Where(p => p.ShopId == shopId && p.CategoryId == categoryId)
+            .Where(p => p.ShopId == shopId && p.CategoryId == categoryId && p.StockQuantity > 0)
             .ToListAsync();
     
     public async Task<List<Product>> GetProductsByCategoryAsync(Guid categoryId)
@@ -58,7 +61,7 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
             .Include(p => p.Shop)
             .Include(p => p.Brand)
             .Include(p => p.Category)
-            .Where(p => p.CategoryId == categoryId)
+            .Where(p => p.CategoryId == categoryId && p.StockQuantity > 0)
             .ToListAsync();
 
     public async Task<(List<Product> Items, int TotalCount)> GetByFiltersAsync(
@@ -68,8 +71,10 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
         var query = _context.Products
             .Include(p => p.Shop)
             .Include(p => p.Category)
+            .ThenInclude(c => c.GlobalCategory)
             .Include(p => p.Brand)
             .Include(p => p.Reviews)
+            .Where(p => p.StockQuantity > 0)
             .AsQueryable();
 
         query = ApplyFilters(query, filters);
@@ -93,6 +98,9 @@ public class ProductRepository(AppDbContext context) : Repository<Product>(conte
 
         if (filters.CategoryId.HasValue)
             query = query.Where(p => p.CategoryId == filters.CategoryId.Value);
+
+        if (filters.GlobalCategoryId.HasValue)
+            query = query.Where(p => p.Category.GlobalCategoryId == filters.GlobalCategoryId.Value);
 
         if (filters.BrandId.HasValue)
             query = query.Where(p => p.BrandId == filters.BrandId.Value);

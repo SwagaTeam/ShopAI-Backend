@@ -28,7 +28,7 @@ public class GetShopProductsQueryHandler(
             .Include(p => p.Shop)
             .Include(p => p.Brand)
             .Include(p => p.Category)
-            .Where(p => p.ShopId == request.ShopId);
+            .Where(p => p.ShopId == request.ShopId && p.StockQuantity > 0);
 
         var totalCount = await query.CountAsync(ct);
 

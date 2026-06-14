@@ -36,7 +36,8 @@ public class MappingProfile : Profile
         // Маппинг для укороченной модели магазина
         CreateMap<Shop, ShopShortDto>();
 
-        CreateMap<Category, CategoryDto>();
+        CreateMap<Category, CategoryDto>()
+            .ForMember(d => d.GlobalCategoryName, opt => opt.MapFrom(s => s.GlobalCategory != null ? s.GlobalCategory.Name : null));
 
         CreateMap<Brand, BrandDto>();
     }

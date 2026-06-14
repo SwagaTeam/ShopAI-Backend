@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Shop> Shops => Set<Shop>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<GlobalCategory> GlobalCategories => Set<GlobalCategory>();
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<User> Users => Set<User>();
@@ -76,11 +77,26 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Category>(builder =>
         {
             builder.HasKey(c => c.Id);
+            builder.HasIndex(c => new { c.ShopId, c.Name, c.ParentCategoryId });
         
             // Связь с товарами
             builder.HasMany(c => c.Products)
                    .WithOne(p => p.Category)
                    .HasForeignKey(p => p.CategoryId);
+
+            builder.HasOne(c => c.GlobalCategory)
+                   .WithMany(gc => gc.StoreCategories)
+                   .HasForeignKey(c => c.GlobalCategoryId)
+                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<GlobalCategory>(builder =>
+        {
+            builder.HasKey(c => c.Id);
+            builder.Property(c => c.Name).HasMaxLength(120).IsRequired();
+            builder.Property(c => c.Slug).HasMaxLength(80).IsRequired();
+            builder.HasIndex(c => c.Slug).IsUnique();
+            builder.HasIndex(c => c.SortOrder);
         });
 
         // --- PRODUCT ---

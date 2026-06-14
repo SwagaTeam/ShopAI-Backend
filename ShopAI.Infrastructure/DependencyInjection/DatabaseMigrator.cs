@@ -23,6 +23,7 @@ namespace ShopAI.Infrastructure.DependencyInjection
                 logger.LogInformation("Checking and applying database migrations...");
                 await context.Database.MigrateAsync(cancellationToken);
                 await SeedAdminAsync(context, configuration, cancellationToken);
+                await SeedGlobalCategoriesAsync(context, cancellationToken);
                 logger.LogInformation("Migrations applied successfully.");
             }
             catch (Exception ex)
@@ -71,6 +72,31 @@ namespace ShopAI.Infrastructure.DependencyInjection
                 await context.SaveChangesAsync(cancellationToken);
                 logger.LogInformation("Seed promoted existing user to Admin for {Email}", normalizedEmail);
             }
+        }
+
+        private async Task SeedGlobalCategoriesAsync(AppDbContext context, CancellationToken cancellationToken)
+        {
+            var defaults = new (string Name, string Slug, int SortOrder)[]
+            {
+                ("Электроника", "electronics", 10),
+                ("Одежда", "clothing", 20),
+                ("Дом и кухня", "home-kitchen", 30),
+                ("Мебель", "furniture", 40),
+                ("Спорт", "sport", 50),
+                ("Красота и здоровье", "beauty-health", 60),
+                ("Товары для взрослых", "adult", 70),
+                ("Другое", "other", 100)
+            };
+
+            foreach (var item in defaults)
+            {
+                var exists = await context.GlobalCategories.AnyAsync(c => c.Slug == item.Slug, cancellationToken);
+                if (exists) continue;
+
+                context.GlobalCategories.Add(new GlobalCategory(item.Name, item.Slug, item.SortOrder));
+            }
+
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         private static (string Hash, string Salt) HashPassword(string password)

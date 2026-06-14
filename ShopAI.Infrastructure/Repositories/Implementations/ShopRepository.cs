@@ -19,7 +19,7 @@ public class ShopRepository(AppDbContext context) : Repository<Shop>(context), I
     public async Task<List<Shop>> GetShopsByCategoryAsync(Guid categoryId)
     {
         return await _context.Products
-            .Where(p => p.CategoryId == categoryId)
+            .Where(p => p.CategoryId == categoryId && p.StockQuantity > 0)
             .Select(p => _context.Shops.First(s => s.Id == p.ShopId))
             .Distinct()
             .ToListAsync();

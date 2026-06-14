@@ -419,7 +419,7 @@ public class ProductsController(
     {
         try
         {
-            var result = await mediator.Send(new GetProductByShopAndCategoryIdsQuery(categoryId, shopId));
+            var result = await mediator.Send(new GetProductByShopAndCategoryIdsQuery(shopId, categoryId));
             return Ok(result);
         }
         catch (KeyNotFoundException ex)

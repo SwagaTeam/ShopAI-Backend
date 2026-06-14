@@ -11,6 +11,9 @@ public class GetProductsByFiltersRequest
     /// <summary>Фильтр по идентификатору категории.</summary>
     public Guid? CategoryId { get; set; }
 
+    /// <summary>Фильтр по глобальной категории сайта.</summary>
+    public Guid? GlobalCategoryId { get; set; }
+
     /// <summary>Фильтр по идентификатору бренда.</summary>
     public Guid? BrandId { get; set; }
 

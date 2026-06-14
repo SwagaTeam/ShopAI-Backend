@@ -1,5 +1,7 @@
 using Domain.Entities;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using ShopAI.Infrastructure;
 using ShopAI.Infrastructure.Repositories.Abstractions;
 
 namespace ShopAI.Application.Handlers;
@@ -10,11 +12,13 @@ namespace ShopAI.Application.Handlers;
 /// <param name="Name">Название категории.</param>
 /// <param name="ShopId">Идентификатор магазина, к которому относится категория.</param>
 /// <param name="ParentId">Необязательный идентификатор родительской категории для создания подкатегории.</param>
-public record CreateCategoryCommand(string Name, Guid ShopId, Guid? ParentId = null) : IRequest<Guid>;
+/// <param name="GlobalCategoryId">Optional site-wide category used for catalog navigation.</param>
+public record CreateCategoryCommand(string Name, Guid ShopId, Guid? ParentId = null, Guid? GlobalCategoryId = null) : IRequest<Guid>;
 
 public class CreateCategoryCommandHandler(
     ICategoryRepository categoryRepository,
-    IShopRepository shopRepository) 
+    IShopRepository shopRepository,
+    AppDbContext context)
     : IRequestHandler<CreateCategoryCommand, Guid>
 {
     public async Task<Guid> Handle(CreateCategoryCommand request, CancellationToken ct)
@@ -33,6 +37,16 @@ public class CreateCategoryCommandHandler(
             }
         }
 
+        if (request.GlobalCategoryId.HasValue)
+        {
+            var globalCategoryExists = await context.GlobalCategories
+                .AnyAsync(c => c.Id == request.GlobalCategoryId.Value && c.IsActive, ct);
+            if (!globalCategoryExists)
+            {
+                throw new ArgumentException("Global category was not found.");
+            }
+        }
+
         var isDuplicate = await categoryRepository.AnyAsync(c => 
             c.Name.ToLower() == request.Name.ToLower() && 
             c.ShopId == request.ShopId && 
@@ -43,7 +57,7 @@ public class CreateCategoryCommandHandler(
             throw new InvalidOperationException("Категория с таким именем уже существует в данном разделе.");
         }
 
-        var category = new Category(request.Name, request.ShopId, request.ParentId);
+        var category = new Category(request.Name, request.ShopId, request.ParentId, request.GlobalCategoryId);
         
         await categoryRepository.AddAsync(category);
         await categoryRepository.SaveAsync(ct);

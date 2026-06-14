@@ -7,7 +7,10 @@ namespace ShopAI.Infrastructure.Repositories.Implementations;
 public class CategoryRepository(AppDbContext context) : Repository<Category>(context), ICategoryRepository
 {
     public async Task<List<Category>> GetByShopIdAsync(Guid shopId)
-        => await _context.Categories.Where(c => c.ShopId == shopId).ToListAsync();
+        => await _context.Categories
+            .Include(c => c.GlobalCategory)
+            .Where(c => c.ShopId == shopId)
+            .ToListAsync();
     
     public async Task<ICollection<Category>> GetAllWithShopsAsync(CancellationToken ct = default)
     {

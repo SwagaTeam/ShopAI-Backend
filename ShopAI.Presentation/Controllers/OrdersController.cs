@@ -4,13 +4,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShopAI.Application.Helpers.Abstractions;
 using ShopAI.Infrastructure;
+using ShopAI.Infrastructure.Storage;
 
 namespace ShopAI.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "User,Seller,Admin")]
-public class OrdersController(AppDbContext context, IUserContext userContext) : ControllerBase
+public class OrdersController(
+    AppDbContext context,
+    IUserContext userContext,
+    IFileStorageService fileStorageService,
+    IConfiguration configuration) : ControllerBase
 {
     /// <summary>
     /// Получить список заказов текущего пользователя.
@@ -45,7 +50,13 @@ public class OrdersController(AppDbContext context, IUserContext userContext) : 
         if (changed)
             await context.SaveChangesAsync(ct);
 
-        return Ok(orders.Select(ToDto).ToList());
+        var result = new List<OrderDto>(orders.Count);
+        foreach (var order in orders)
+        {
+            result.Add(await ToDtoAsync(order));
+        }
+
+        return Ok(result);
     }
 
     /// <summary>
@@ -75,7 +86,7 @@ public class OrdersController(AppDbContext context, IUserContext userContext) : 
         if (ApplyDemoStatusProgression(order))
             await context.SaveChangesAsync(ct);
 
-        return Ok(ToDto(order));
+        return Ok(await ToDtoAsync(order));
     }
 
     private static bool ApplyDemoStatusProgression(Order order)
@@ -98,6 +109,44 @@ public class OrdersController(AppDbContext context, IUserContext userContext) : 
 
         order.Status = next;
         return true;
+    }
+
+    private async Task<OrderDto> ToDtoAsync(Order order)
+    {
+        var items = new List<OrderItemDto>(order.Items.Count);
+        foreach (var item in order.Items)
+        {
+            items.Add(new OrderItemDto(
+                item.ProductId,
+                item.Product?.Name ?? "Товар",
+                await ResolveImageUrlAsync(item.Product?.ImageUrl),
+                item.Quantity,
+                item.PriceAtPurchase,
+                item.TotalPrice));
+        }
+
+        return new OrderDto(
+            order.Id,
+            order.ShopId,
+            order.Shop?.Name ?? "Магазин",
+            order.CreatedAt,
+            order.Status.ToString(),
+            ToStatusLabel(order.Status),
+            order.PaymentStatus ?? string.Empty,
+            order.DeliveryAddress,
+            order.ContactPhone,
+            order.Comment,
+            items.Sum(i => i.TotalPrice),
+            items);
+    }
+
+    private async Task<string> ResolveImageUrlAsync(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        if (Uri.TryCreate(value, UriKind.Absolute, out _)) return value;
+
+        var bucket = configuration["Minio:Bucket"] ?? "shopai-images";
+        return await fileStorageService.GetPresignedUrlAsync(bucket, value);
     }
 
     private static OrderDto ToDto(Order order)
