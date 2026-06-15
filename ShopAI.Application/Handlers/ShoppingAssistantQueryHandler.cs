@@ -46,6 +46,13 @@ public class ShoppingAssistantQueryHandler(
         ["серый"] = ["gray", "grey", "graphite", "silver", "steel"]
     };
 
+    private static readonly HashSet<string> SearchStopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "a", "an", "the", "and", "or", "for", "with",
+        "дай", "дайте", "мне", "найди", "найти", "покажи", "подбери", "нужен", "нужна", "нужно",
+        "для", "или", "это", "есть", "вариант", "варианты", "товар", "товары"
+    };
+
     private static readonly BundleSlot[] KitchenSlots =
     [
         new("cabinet", "Кухонный шкаф", ["шкаф", "шкафы", "гарнитур", "cabinet", "kitchen cabinet", "kitchen-cabinet", "storage"]),
@@ -85,9 +92,16 @@ public class ShoppingAssistantQueryHandler(
             .ToListAsync(ct);
 
         var terms = BuildSearchTerms(request.Request.UserPrompt, interpreted);
+        var promptTerms = BuildPromptSearchTerms(request.Request.UserPrompt);
         var ranked = pool
-            .Select(p => new { Product = p, Score = ScoreProduct(p, terms, interpreted) })
-            .Where(x => terms.Count == 0 || x.Score > 0)
+            .Select(p => new
+            {
+                Product = p,
+                Score = ScoreProduct(p, terms, interpreted),
+                PromptScore = ScorePromptProduct(p, promptTerms)
+            })
+            .Where(x => (terms.Count == 0 || x.Score > 0)
+                        && (promptTerms.Count == 0 || x.PromptScore > 0))
             .ToList();
 
         var ordered = interpreted.PriceSort switch
@@ -211,11 +225,23 @@ public class ShoppingAssistantQueryHandler(
 
     private static List<BundleSlot> ResolveBundleSlots(string prompt, InterpretedShoppingQuery interpreted)
     {
+        var promptTerms = BuildPromptSearchTerms(prompt).Concat(Tokenize(prompt)).ToList();
+        var promptAsksForBundle = HasAnyRoot(
+            promptTerms,
+            "вариант", "комплект", "набор", "кух",
+            "РІР°СЂРёР°РЅС‚", "РєРѕРјРїР»РµРєС‚", "РЅР°Р±РѕСЂ", "РєСѓС…",
+            "interior", "kitchen");
+        if (!promptAsksForBundle) return [];
+
         var allTerms = BuildSearchTerms(prompt, interpreted);
         var asksForBundle = string.Equals(interpreted.Intent, "bundle", StringComparison.OrdinalIgnoreCase)
                             || HasAnyRoot(allTerms, "вариант", "комплект", "набор", "кух", "interior", "kitchen");
 
         if (!asksForBundle) return [];
+
+        if (!HasAnyRoot(promptTerms, "kitchen")
+            && HasAnyRoot(allTerms, "kitchen"))
+            return [];
 
         if (HasAnyRoot(allTerms, "кух", "kitchen"))
             return KitchenSlots.ToList();
@@ -291,6 +317,55 @@ public class ShoppingAssistantQueryHandler(
         }
 
         return score;
+    }
+
+    private static int ScorePromptProduct(Product product, IReadOnlyCollection<string> promptTerms)
+    {
+        if (promptTerms.Count == 0) return 0;
+
+        var score = 0;
+        foreach (var term in promptTerms)
+        {
+            if (ContainsSlotTerm(product.Name, term)) score += 10;
+            if (ContainsSlotTerm(product.Category?.Name, term)) score += 8;
+            if (ContainsSlotTerm(product.Tags, term)) score += 6;
+            if (ContainsSlotTerm(product.Brand?.Name, term)) score += 5;
+            if (ContainsSlotTerm(product.Description, term)) score += 3;
+            if (ContainsSlotTerm(product.AttributesJson, term)) score += 2;
+        }
+
+        return score;
+    }
+
+    private static List<string> BuildPromptSearchTerms(string prompt)
+    {
+        return Tokenize(prompt)
+            .Where(t => t.Length > 2 && !SearchStopWords.Contains(t))
+            .SelectMany(t => ExpandTerm(t).Concat(BuildLooseRoots(t)))
+            .Where(t => t.Length > 2 && !SearchStopWords.Contains(t))
+            .Select(t => t.ToLowerInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(40)
+            .ToList();
+    }
+
+    private static IEnumerable<string> BuildLooseRoots(string term)
+    {
+        if (term.StartsWith("сер", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return "сер";
+        }
+
+        if (term.StartsWith("кух", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return "кух";
+        }
+
+        if (term.Length >= 6)
+        {
+            var root = term[..^2];
+            if (root.Length >= 4) yield return root;
+        }
     }
 
     private static List<string> BuildSearchTerms(string prompt, InterpretedShoppingQuery interpreted)

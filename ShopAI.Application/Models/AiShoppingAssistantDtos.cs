@@ -40,7 +40,10 @@ public record InterpretedShoppingQuery
 public record ShoppingAssistantResponse(
     InterpretedShoppingQuery Interpreted,
     List<ProductShortDto> Items,
-    List<List<ProductShortDto>> Bundles);
+    List<List<ProductShortDto>> Bundles)
+{
+    public string Message => Items.Count == 0 && Bundles.Count == 0 ? "Ничего не найдено" : string.Empty;
+}
 
 /// <summary>
 /// Запрос на генерацию тегов товара.
