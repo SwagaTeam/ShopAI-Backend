@@ -41,9 +41,17 @@ public class ShoppingAssistantQueryHandler(
         ["шкаф"] = ["cabinet", "kitchen-cabinet", "storage"],
         ["стул"] = ["chair", "dining-chair"],
         ["стол"] = ["table", "dining-table"],
-        ["плитка"] = ["tile", "backsplash", "ceramic"],
+        ["плита"] = ["stove", "cooktop", "oven", "hob"],
+        ["плитка"] = ["stove", "cooktop", "oven", "hob"],
+        ["духовка"] = ["oven", "stove"],
+        ["варочная"] = ["cooktop", "hob", "stove"],
         ["холодильник"] = ["fridge", "refrigerator"],
-        ["серый"] = ["gray", "grey", "graphite", "silver", "steel"]
+        ["серый"] = ["gray", "grey", "graphite", "silver", "steel"],
+        ["кабинет"] = ["office", "workspace", "home-office"],
+        ["офис"] = ["office", "workspace", "home-office"],
+        ["монитор"] = ["monitor", "display"],
+        ["полка"] = ["shelf", "bookcase", "storage"],
+        ["органайзер"] = ["organizer", "desk-organizer", "storage"]
     };
 
     private static readonly HashSet<string> SearchStopWords = new(StringComparer.OrdinalIgnoreCase)
@@ -58,8 +66,18 @@ public class ShoppingAssistantQueryHandler(
         new("cabinet", "Кухонный шкаф", ["шкаф", "шкафы", "гарнитур", "cabinet", "kitchen cabinet", "kitchen-cabinet", "storage"]),
         new("chair", "Стул", ["стул", "стулья", "chair", "chairs", "dining-chair"]),
         new("table", "Стол", ["стол", "table", "dining table", "dining-table"]),
-        new("tile", "Плитка", ["плитка", "кафель", "керамогранит", "tile", "tiles", "backsplash", "ceramic"]),
+        new("stove", "Кухонная плита", ["плита", "плитка", "варочная панель", "варочная", "духовка", "stove", "cooktop", "oven", "hob"]),
         new("fridge", "Холодильник", ["холодильник", "fridge", "refrigerator"])
+    ];
+
+    private static readonly BundleSlot[] HomeOfficeSlots =
+    [
+        new("desk", "Рабочий стол", ["рабочий стол", "письменный стол", "desk", "office-desk"]),
+        new("office-chair", "Офисное кресло", ["кресло", "офисное кресло", "стул", "chair", "office-chair"]),
+        new("monitor", "Монитор", ["монитор", "display", "monitor"]),
+        new("desk-lamp", "Настольная лампа", ["настольная лампа", "лампа", "desk-lamp", "lamp", "lighting"]),
+        new("shelf", "Полка", ["полка", "стеллаж", "shelf", "bookcase", "storage"]),
+        new("keyboard", "Клавиатура", ["клавиатура", "keyboard"])
     ];
 
     public async Task<ShoppingAssistantResponse> Handle(ShoppingAssistantQuery request, CancellationToken ct)
@@ -245,6 +263,9 @@ public class ShoppingAssistantQueryHandler(
 
         if (HasAnyRoot(allTerms, "кух", "kitchen"))
             return KitchenSlots.ToList();
+
+        if (HasAnyRoot(allTerms, "кабинет", "офис", "рабоч", "office", "workspace", "home-office"))
+            return HomeOfficeSlots.ToList();
 
         var slotTerms = interpreted.RequiredCategories
             .Concat(interpreted.CategoryHints)
@@ -457,15 +478,26 @@ public class ShoppingAssistantQueryHandler(
 
         if (term.StartsWith("плит", StringComparison.OrdinalIgnoreCase))
         {
-            yield return "tile";
-            yield return "backsplash";
-            yield return "ceramic";
+            yield return "плита";
+            yield return "stove";
+            yield return "cooktop";
+            yield return "oven";
+            yield return "hob";
         }
 
         if (term.StartsWith("холод", StringComparison.OrdinalIgnoreCase))
         {
             yield return "fridge";
             yield return "refrigerator";
+        }
+
+        if (term.StartsWith("кабинет", StringComparison.OrdinalIgnoreCase)
+            || term.StartsWith("офис", StringComparison.OrdinalIgnoreCase)
+            || term.StartsWith("рабоч", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return "office";
+            yield return "workspace";
+            yield return "home-office";
         }
     }
 
@@ -477,19 +509,24 @@ public class ShoppingAssistantQueryHandler(
         var terms = BuildSearchTerms(prompt, interpreted);
         var isKitchenBundle = HasAnyRoot(terms, "кух", "kitchen")
                               && HasAnyRoot(terms, "вариант", "комплект", "набор", "кух", "kitchen");
+        var isHomeOfficeBundle = HasAnyRoot(terms, "кабинет", "офис", "рабоч", "office", "workspace", "home-office")
+                                 && HasAnyRoot(terms, "вариант", "комплект", "набор", "кабинет", "офис", "рабоч", "office", "workspace", "home-office");
 
-        if (!isKitchenBundle) return interpreted;
+        if (!isKitchenBundle && !isHomeOfficeBundle) return interpreted;
 
         var colors = interpreted.Colors
             .Concat(ResolveColorTerms(prompt, interpreted))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        var slots = isKitchenBundle ? KitchenSlots : HomeOfficeSlots;
+        var defaultCategory = isKitchenBundle ? "kitchen" : "home-office";
+
         return new InterpretedShoppingQuery
         {
             Intent = "bundle",
-            CategoryHints = interpreted.CategoryHints.Count > 0 ? interpreted.CategoryHints : ["kitchen"],
-            RequiredCategories = KitchenSlots.Select(s => s.Key).ToList(),
+            CategoryHints = interpreted.CategoryHints.Count > 0 ? interpreted.CategoryHints : [defaultCategory],
+            RequiredCategories = slots.Select(s => s.Key).ToList(),
             Keywords = interpreted.Keywords,
             Colors = colors,
             Brands = interpreted.Brands,
@@ -498,7 +535,7 @@ public class ShoppingAssistantQueryHandler(
             BudgetMin = request.BudgetMin ?? interpreted.BudgetMin,
             BudgetMax = request.BudgetMax ?? interpreted.BudgetMax,
             PriceSort = interpreted.PriceSort,
-            BundleSize = KitchenSlots.Length
+            BundleSize = slots.Length
         };
     }
 
@@ -559,7 +596,7 @@ public class ShoppingAssistantQueryHandler(
     {
         return new InterpretedShoppingQuery
         {
-            Intent = HasAnyRoot(Tokenize(request.UserPrompt), "вариант", "комплект", "набор", "кух") ? "bundle" : "search",
+            Intent = HasAnyRoot(Tokenize(request.UserPrompt), "вариант", "комплект", "набор", "кух", "кабинет", "офис", "рабоч") ? "bundle" : "search",
             Keywords = Tokenize(request.UserPrompt).Take(10).ToList(),
             BudgetMin = request.BudgetMin,
             BudgetMax = request.BudgetMax,
