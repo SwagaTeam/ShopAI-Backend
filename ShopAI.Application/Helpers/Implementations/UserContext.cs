@@ -11,13 +11,20 @@ namespace ShopAI.Application.Helpers.Implementations
         {
             get
             {
-                var userIdClaim = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)
-                                  ?? httpContextAccessor.HttpContext?.User?.FindFirst("sub");
+                var user = httpContextAccessor.HttpContext?.User;
+
+                var userIdClaim =
+                    user?.FindFirst("sub") ??
+                    user?.FindFirst(ClaimTypes.NameIdentifier) ??
+                    user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
 
                 if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 {
+                    var claims = user?.Claims.Select(c => $"{c.Type} = {c.Value}");
+
+                    Console.WriteLine(string.Join("\n", claims ?? []));
                     throw new UnauthorizedAccessException("Пользователь не авторизован.");
-                }
+                }   
 
                 return userId;
             }
