@@ -10,7 +10,6 @@ namespace ShopAI.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "User,Seller,Admin")]
 public class DashboardController(
     AppDbContext context,
     IUserContext userContext,
@@ -81,7 +80,6 @@ public class DashboardController(
     /// <response code="401">Пользователь не авторизован.</response>
     /// <response code="403">Пользователь не имеет роли Seller или Admin.</response>
     [HttpGet("seller")]
-    [Authorize(Roles = "Seller,Admin")]
     [ProducesResponseType(typeof(SellerDashboardVm), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
