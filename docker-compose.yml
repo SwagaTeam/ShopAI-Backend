@@ -25,8 +25,10 @@ services:
       - OpenRouter__Temperature=${OPENROUTER_TEMPERATURE}
       - OpenRouter__TopP=${OPENROUTER_TOP_P}
       - OpenRouter__ApiKey=${OPENROUTER_API_KEY}
-    ports:
-      - "5000:8080"
+    # ВАЖНО: Убираем ports "5000:8080" отсюда, чтобы закрыть прямой HTTP-доступ снаружи.
+    # Теперь наружу будут смотреть только порты Nginx (80 и 443).
+    expose:
+      - "8080"
     depends_on:
       db:
         condition: service_healthy
@@ -68,6 +70,32 @@ services:
       - "9001:9001"
     volumes:
       - minio-data:/data
+    networks:
+      - shopai-net
+
+  nginx:
+    image: nginx:latest
+    container_name: shopai-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    depends_on:
+      - shopai-api
+    networks:
+      - shopai-net
+  
+  certbot:
+    image: certbot/certbot:latest
+    container_name: shopai-certbot
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done'"
     networks:
       - shopai-net
 
