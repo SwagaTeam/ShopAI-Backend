@@ -55,6 +55,7 @@ services:
       Minio__SecretKey: ${MINIO_ROOT_PASSWORD}
       Minio__Bucket: ${MINIO_BUCKET}
       Minio__UseSsl: ${MINIO_USE_SSL}
+      Minio__PublicBaseUrl: ${MINIO_PUBLIC_BASE_URL:-}
       Admin__Email: ${ADMIN_EMAIL}
       Admin__Password: ${ADMIN_PASSWORD}
       Admin__FullName: ${ADMIN_FULL_NAME}
