@@ -25,8 +25,6 @@ services:
       - OpenRouter__Temperature=${OPENROUTER_TEMPERATURE}
       - OpenRouter__TopP=${OPENROUTER_TOP_P}
       - OpenRouter__ApiKey=${OPENROUTER_API_KEY}
-    # ВАЖНО: Убираем ports "5000:8080" отсюда, чтобы закрыть прямой HTTP-доступ снаружи.
-    # Теперь наружу будут смотреть только порты Nginx (80 и 443).
     expose:
       - "8080"
     depends_on:
@@ -82,8 +80,8 @@ services:
       - "443:443"
     volumes:
       - ./nginx/conf:/etc/nginx/conf.d
-      - ./nginx/certbot/conf:/etc/letsencrypt
-      - ./nginx/certbot/www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt  # ИСПРАВЛЕНО: Безопасное хранение ключей в Volume
+      - certbot-www:/var/www/certbot   # ИСПРАВЛЕНО: Безопасное хранение вебрута в Volume
     depends_on:
       - shopai-api
     networks:
@@ -93,8 +91,8 @@ services:
     image: certbot/certbot:latest
     container_name: shopai-certbot
     volumes:
-      - ./nginx/certbot/conf:/etc/letsencrypt
-      - ./nginx/certbot/www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt  # ИСПРАВЛЕНО: Общий Volume для конфигов
+      - certbot-www:/var/www/certbot   # ИСПРАВЛЕНО: Общий Volume для проверочных файлов
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done'"
     networks:
       - shopai-net
@@ -106,3 +104,5 @@ networks:
 volumes:
   pgdata:
   minio-data:
+  certbot-conf:  # ИСПРАВЛЕНО: Изолированный том для SSL-сертификатов
+  certbot-www:   # ИСПРАВЛЕНО: Изолированный том для ACME-челленджей
