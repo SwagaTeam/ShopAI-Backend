@@ -11,6 +11,7 @@ namespace ShopAI.Presentation.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces(MediaTypeNames.Application.Json)]
+    [Authorize]
     public class FavoritesController(IMediator mediator) : ControllerBase
     {
         /// <summary>

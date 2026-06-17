@@ -10,6 +10,7 @@ namespace ShopAI.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class DashboardController(
     AppDbContext context,
     IUserContext userContext,

@@ -110,6 +110,19 @@ if (swaggerEnabled)
 
 app.UseCors("AllowAll");
 
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (UnauthorizedAccessException ex) when (!context.Response.HasStarted)
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+    }
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
