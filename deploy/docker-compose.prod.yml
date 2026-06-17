@@ -56,6 +56,9 @@ services:
       Minio__Bucket: ${MINIO_BUCKET}
       Minio__UseSsl: ${MINIO_USE_SSL}
       Minio__PublicBaseUrl: ${MINIO_PUBLIC_BASE_URL:-}
+      YooKassa__ShopId: ${YooKassa__ShopId:-}
+      YooKassa__SecretKey: ${YooKassa__SecretKey:-}
+      YooKassa__ReturnUrl: ${YooKassa__ReturnUrl:-https://84.252.132.226/orders}
       Admin__Email: ${ADMIN_EMAIL}
       Admin__Password: ${ADMIN_PASSWORD}
       Admin__FullName: ${ADMIN_FULL_NAME}
